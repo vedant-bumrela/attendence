@@ -1,0 +1,23 @@
+{
+  "name": "doctor-attendance-dashboard",
+  "version": "1.0.0",
+  "description": "Doctor attendance monitoring system with backend storage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "attendance",
+    "doctor",
+    "clinic",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "mongoose": "^8.0.3",
+    "dotenv": "^16.3.1"
+  }
+}
