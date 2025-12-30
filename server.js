@@ -189,7 +189,7 @@ app.get('/api/export/csv', async (req, res) => {
         const csvRows = [];
 
         // Header
-        csvRows.push(['Date', 'Day', 'Doctor Name', 'Status']);
+        csvRows.push(['Date', 'Day', 'Doctor Name', 'Status', 'Time Slot']);
 
         records.forEach(record => {
             const date = new Date(record.date);
@@ -201,7 +201,8 @@ app.get('/api/export/csv', async (req, res) => {
                 formattedDate,
                 dayName,
                 record.doctorName,
-                record.status.charAt(0).toUpperCase() + record.status.slice(1)
+                record.status.charAt(0).toUpperCase() + record.status.slice(1),
+                record.timeSlot || 'N/A'
             ]);
         });
 
