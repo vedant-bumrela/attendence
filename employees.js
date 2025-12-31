@@ -1,8 +1,8 @@
 // ===== EMPLOYEE LIST =====
 const employees = [
-    { name: "Shreya Talekar" },
-    { name: "Aditi Deshpande" },
-    { name: "Vedant Bumrela" },
+    { name: "Ms. Shreya Talekar" },
+    { name: "Ms. Aditi Deshpande" },
+    { name: "Mr. Vedant Bumrela" },
     { name: "Dr. Rajendra Tippanwar" }
 ];
 
