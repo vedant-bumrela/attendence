@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Attendance Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Clinic Attendance Dashboard</h1>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+                <button class="nav-tab" data-tab="database">Database Records</button>
+            </div>
+
+            <div class="header-controls">
+                <a href="home.html" class="btn btn-secondary" style="text-decoration: none;">
+                    🏠 Home
+                </a>
+                <div class="date-selector">
+                    <input type="date" id="dateInput">
+                </div>
+                <button class="btn btn-primary" id="exportBtn">
+                    Download .csv
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- VIEW: Dashboard -->
+        <div id="dashboardView" class="view-section active">
+            <!-- Current Date Display -->
+            <div class="current-date">
+                <h2 id="currentDateDisplay"></h2>
+                <div class="day-name" id="dayNameDisplay"></div>
+            </div>
+
+            <!-- Time Slots Container -->
+            <div class="slots-container" id="slotsContainer">
+                <!-- Slot 1: 8-11 AM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon"></div>
+                        <h3>Morning Shift</h3>
+                        <span class="slot-time">8:00 AM - 11:00 AM</span>
+                    </div>
+                    <div class="doctors-grid" id="slot1"></div>
+                </div>
+
+                <!-- Slot 2: 11-2 PM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon"></div>
+                        <h3>Mid-Day Shift</h3>
+                        <span class="slot-time">11:00 AM - 2:00 PM</span>
+                    </div>
+                    <div class="doctors-grid" id="slot2"></div>
+                </div>
+
+                <!-- Slot 3: 2-5 PM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon"></div>
+                        <h3>Afternoon Shift</h3>
+                        <span class="slot-time">2:00 PM - 5:00 PM</span>
+                    </div>
+                    <div class="doctors-grid" id="slot3"></div>
+                </div>
+
+                <!-- Slot 4: 5-8 PM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon"></div>
+                        <h3>Evening Shift</h3>
+                        <span class="slot-time">5:00 PM - 8:00 PM</span>
+                    </div>
+                    <div class="doctors-grid" id="slot4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: Database Records -->
+        <div id="databaseView" class="view-section" style="display: none;">
+            <div class="db-header">
+                <h2>MongoDB Records</h2>
+                <button class="btn btn-secondary" onclick="refreshDatabaseView()">Refresh Data</button>
+            </div>
+            <div class="table-container">
+                <table class="history-table db-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Doctor Name</th>
+                            <th>Status</th>
+                            <th>Time Slot</th>
+                            <th>Recorded At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="databaseTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- History Modal -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Attendance History</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Doctor</th>
+                            <th>Time Slot</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

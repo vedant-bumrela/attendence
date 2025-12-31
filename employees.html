@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Attendance Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="employees.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Employee Attendance Dashboard</h1>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+                <button class="nav-tab" data-tab="database">Database Records</button>
+            </div>
+
+            <div class="header-controls">
+                <a href="home.html" class="btn btn-secondary" style="text-decoration: none;">
+                    🏠 Home
+                </a>
+                <div class="date-selector">
+                    <input type="date" id="dateInput">
+                </div>
+                <button class="btn btn-primary" id="exportBtn">
+                    Download .csv
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- VIEW: Dashboard -->
+        <div id="dashboardView" class="view-section active">
+            <!-- Current Date Display -->
+            <div class="current-date">
+                <h2 id="currentDateDisplay"></h2>
+                <div class="day-name" id="dayNameDisplay"></div>
+            </div>
+
+            <!-- Sunday Warning -->
+            <div id="sundayWarning" class="sunday-warning" style="display: none;">
+                <div class="warning-icon">🌙</div>
+                <h3>Clinic Closed - Sunday</h3>
+                <p>Employees do not work on Sundays. Please select a different date.</p>
+            </div>
+
+            <!-- Time Slots Container -->
+            <div class="slots-container" id="slotsContainer">
+                <!-- Slot 1: 8AM-2PM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon">☀️</div>
+                        <h3>Morning Shift</h3>
+                        <span class="slot-time">8:00 AM - 2:00 PM</span>
+                    </div>
+                    <div class="employees-grid" id="slot1"></div>
+                </div>
+
+                <!-- Slot 2: 11AM-5PM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon">🌤️</div>
+                        <h3>Day Shift</h3>
+                        <span class="slot-time">11:00 AM - 5:00 PM</span>
+                    </div>
+                    <div class="employees-grid" id="slot2"></div>
+                </div>
+
+                <!-- Slot 3: 5PM-8PM -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon">🌆</div>
+                        <h3>Evening Shift</h3>
+                        <span class="slot-time">5:00 PM - 8:00 PM</span>
+                    </div>
+                    <div class="employees-grid" id="slot3"></div>
+                </div>
+
+                <!-- Slot 4: 2PM-8PM (Overtime) -->
+                <div class="slot-section">
+                    <div class="slot-header">
+                        <div class="slot-icon">⏰</div>
+                        <h3>Overtime Shift</h3>
+                        <span class="slot-time">2:00 PM - 8:00 PM</span>
+                    </div>
+                    <div class="employees-grid" id="slot4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: Database Records -->
+        <div id="databaseView" class="view-section" style="display: none;">
+            <div class="db-header">
+                <h2>MongoDB Records</h2>
+                <button class="btn btn-secondary" onclick="refreshDatabaseView()">Refresh Data</button>
+            </div>
+            <div class="table-container">
+                <table class="history-table db-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Employee Name</th>
+                            <th>Status</th>
+                            <th>Time Slot</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
+                            <th>Recorded At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="databaseTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="employees.js"></script>
+</body>
+
+</html>

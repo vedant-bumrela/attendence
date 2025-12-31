@@ -1,0 +1,171 @@
+/* =========================================
+   EMPLOYEE ATTENDANCE - ADDITIONAL STYLES
+   ========================================= */
+
+/* Sunday Warning */
+.sunday-warning {
+    background: rgba(244, 63, 94, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    margin: 2rem auto;
+    max-width: 600px;
+}
+
+.warning-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 4px 20px rgba(244, 63, 94, 0.3));
+}
+
+.sunday-warning h3 {
+    font-size: 1.8rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.sunday-warning p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* Employee Cards - Extended for Time Inputs */
+.employee-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.employee-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.employees-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.employee-info {
+    margin-bottom: 1.5rem;
+}
+
+.employee-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+.employee-shift {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Time Inputs Section */
+.time-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.time-input-group label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.time-input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.time-input:hover:not(:disabled) {
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.time-input:focus:not(:disabled) {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.time-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Color coding for time inputs when present */
+.employee-card:has(.attendance-btn.present.active) .time-input:not(:disabled) {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.employee-card:has(.attendance-btn.present.active) .time-input:not(:disabled):focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* Database table adjustment for extra column */
+.db-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.table-container {
+    overflow-x: auto;
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 16px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .employees-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .time-inputs {
+        grid-template-columns: 1fr;
+    }
+
+    .header-controls {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .header-controls>* {
+        width: 100%;
+    }
+}

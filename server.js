@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const Attendance = require('./models/Attendance');
+const EmployeeAttendance = require('./models/EmployeeAttendance');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -219,6 +220,159 @@ app.get('/api/export/csv', async (req, res) => {
         res.status(500).json({ error: 'Failed to export data' });
     }
 });
+
+// ===== EMPLOYEE ATTENDANCE API ROUTES =====
+
+// Helper function to convert employee MongoDB docs to frontend format
+function formatEmployeeAttendanceData(records) {
+    const formatted = {};
+    records.forEach(record => {
+        if (!formatted[record.date]) {
+            formatted[record.date] = {};
+        }
+
+        let key = record.employeeName;
+        if (record.slotNumber) {
+            key = `${record.employeeName}_Slot${record.slotNumber}`;
+        }
+
+        formatted[record.date][key] = {
+            status: record.status,
+            timeSlot: record.timeSlot,
+            slotNumber: record.slotNumber,
+            checkInTime: record.checkInTime,
+            checkOutTime: record.checkOutTime
+        };
+    });
+    return formatted;
+}
+
+// Get all employee attendance data
+app.get('/api/employees/attendance', async (req, res) => {
+    try {
+        const records = await EmployeeAttendance.find();
+        const formatted = formatEmployeeAttendanceData(records);
+        res.json(formatted);
+    } catch (error) {
+        console.error('Error fetching employee attendance:', error);
+        res.status(500).json({ error: 'Failed to fetch employee attendance data' });
+    }
+});
+
+// Get raw employee attendance records (sorted by date desc)
+app.get('/api/employees/attendance/raw', async (req, res) => {
+    try {
+        const records = await EmployeeAttendance.find().sort({ date: -1, createdAt: -1 });
+        res.json(records);
+    } catch (error) {
+        console.error('Error fetching raw employee attendance:', error);
+        res.status(500).json({ error: 'Failed to fetch raw employee data' });
+    }
+});
+
+// Get employee attendance for a specific date
+app.get('/api/employees/attendance/:date', async (req, res) => {
+    try {
+        const records = await EmployeeAttendance.find({ date: req.params.date });
+        const formatted = {};
+        records.forEach(record => {
+            const key = record.slotNumber ?
+                `${record.employeeName}_Slot${record.slotNumber}` :
+                record.employeeName;
+            formatted[key] = {
+                status: record.status,
+                timeSlot: record.timeSlot,
+                slotNumber: record.slotNumber,
+                checkInTime: record.checkInTime,
+                checkOutTime: record.checkOutTime
+            };
+        });
+        res.json(formatted);
+    } catch (error) {
+        console.error('Error fetching employee date attendance:', error);
+        res.status(500).json({ error: 'Failed to fetch employee attendance' });
+    }
+});
+
+// Save/Update employee attendance for a specific date
+app.post('/api/employees/attendance/:date', async (req, res) => {
+    try {
+        const date = req.params.date;
+        const attendanceData = req.body;
+
+        console.log('Received employee attendance data:', JSON.stringify(attendanceData, null, 2));
+
+        // Delete existing records for this date
+        await EmployeeAttendance.deleteMany({ date });
+
+        // Insert new records
+        const records = Object.entries(attendanceData).map(([key, data]) => {
+            const isComposite = key.includes('_Slot');
+            const employeeName = isComposite ? key.split('_Slot')[0] : key;
+            const slotNumber = isComposite ? parseInt(key.split('_Slot')[1]) : null;
+
+            return {
+                date,
+                employeeName,
+                status: data.status,
+                timeSlot: data.timeSlot || 'N/A',
+                slotNumber: data.slotNumber || slotNumber,
+                checkInTime: data.checkInTime || null,
+                checkOutTime: data.checkOutTime || null
+            };
+        });
+
+        if (records.length > 0) {
+            await EmployeeAttendance.insertMany(records);
+        }
+
+        res.json({ success: true, message: 'Employee attendance saved successfully' });
+    } catch (error) {
+        console.error('Error saving employee attendance:', error);
+        res.status(500).json({ success: false, message: 'Error saving employee data' });
+    }
+});
+
+// Export employee data as CSV
+app.get('/api/employees/export/csv', async (req, res) => {
+    try {
+        const records = await EmployeeAttendance.find().sort({ date: 1 });
+        const csvRows = [];
+
+        // Header
+        csvRows.push(['Date', 'Day', 'Employee Name', 'Status', 'Time Slot', 'Check-In', 'Check-Out']);
+
+        records.forEach(record => {
+            const date = new Date(record.date);
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[date.getDay()];
+            const formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            csvRows.push([
+                formattedDate,
+                dayName,
+                record.employeeName,
+                record.status.charAt(0).toUpperCase() + record.status.slice(1),
+                record.timeSlot || 'N/A',
+                record.checkInTime || 'N/A',
+                record.checkOutTime || 'N/A'
+            ]);
+        });
+
+        // Convert to CSV string
+        const csvContent = csvRows.map(row =>
+            row.map(cell => `"${cell}"`).join(',')
+        ).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="employee-attendance-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csvContent);
+    } catch (error) {
+        console.error('Error exporting employee CSV:', error);
+        res.status(500).json({ error: 'Failed to export employee data' });
+    }
+});
+
 
 // Health check
 app.get('/api/health', (req, res) => {
