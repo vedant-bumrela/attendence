@@ -22,6 +22,7 @@
             <div class="nav-tabs">
                 <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
                 <button class="nav-tab" data-tab="database">Database Records</button>
+                <button class="nav-tab" data-tab="reports">Reports</button>
             </div>
 
             <div class="header-controls">
@@ -122,6 +123,78 @@
                         <!-- Populated by JS -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- VIEW: Reports -->
+        <div id="reportsView" class="view-section" style="display: none;">
+            <div class="reports-header">
+                <h2>📊 Attendance Reports & Analytics</h2>
+                <div class="date-range-selector">
+                    <div class="date-range-group">
+                        <label>From Date</label>
+                        <input type="date" id="reportStartDate" class="date-range-input">
+                    </div>
+                    <div class="date-range-group">
+                        <label>To Date</label>
+                        <input type="date" id="reportEndDate" class="date-range-input">
+                    </div>
+                    <button class="btn btn-primary" id="generateReportBtn">Generate Report</button>
+                    <button class="btn btn-secondary" id="downloadReportCsvBtn" style="display: none;">Download
+                        Report</button>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="card-icon">📅</div>
+                    <div class="card-content">
+                        <div class="card-value" id="totalWorkingDays">-</div>
+                        <div class="card-label">Total Working Days</div>
+                        <div class="card-sublabel">(Excluding Sundays)</div>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="card-icon">✅</div>
+                    <div class="card-content">
+                        <div class="card-value" id="totalRecordedDays">-</div>
+                        <div class="card-label">Days with Records</div>
+                        <div class="card-sublabel">Attendance marked</div>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="card-icon">📈</div>
+                    <div class="card-content">
+                        <div class="card-value" id="averageAttendance">-</div>
+                        <div class="card-label">Average Attendance</div>
+                        <div class="card-sublabel">Across all employees</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Statistics Table -->
+            <div class="stats-container">
+                <h3>Employee-wise Statistics</h3>
+                <div class="table-container">
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Present Days</th>
+                                <th>Absent Days</th>
+                                <th>Overtime Days</th>
+                                <th>Attendance Rate</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>

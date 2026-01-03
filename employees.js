@@ -1,8 +1,8 @@
 // ===== EMPLOYEE LIST =====
 const employees = [
-    { name: "Ms. Shreya Talekar" },
-    { name: "Ms. Aditi Deshpande" },
-    { name: "Mr. Vedant Bumrela" },
+    { name: "Shreya Talekar" },
+    { name: "Aditi Deshpande" },
+    { name: "Vedant Bumrela" },
     { name: "Dr. Rajendra Tippanwar" }
 ];
 
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initializeDateInput() {
     const dateInput = document.getElementById('dateInput');
     dateInput.value = formatDateForInput(selectedDate);
-    dateInput.max = formatDateForInput(new Date()); // Can't mark future attendance
+    dateInput.max = formatDateForInput(new Date());
 }
 
 function formatDateForInput(date) {
@@ -109,10 +109,7 @@ function createEmployeeCard(employee, dateKey, slot) {
     card.className = 'employee-card';
     card.dataset.employee = employee.name;
 
-    // Create unique key for this slot: EmployeeName_SlotX
     const uniqueKey = `${employee.name}_Slot${slot.number}`;
-
-    // Check attendance using unique key
     const attendanceInfo = getAttendanceInfo(dateKey, uniqueKey);
     const currentStatus = attendanceInfo.status;
     const checkInTime = attendanceInfo.checkInTime || '';
@@ -163,13 +160,11 @@ function createEmployeeCard(employee, dateKey, slot) {
         </div>
     `;
 
-    // Add click handlers
     const buttons = card.querySelectorAll('.attendance-btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', handleAttendanceClick);
     });
 
-    // Add change handlers for time inputs
     const checkInInput = card.querySelector('.check-in-input');
     const checkOutInput = card.querySelector('.check-out-input');
 
@@ -188,23 +183,18 @@ function handleAttendanceClick(event) {
     const slotNum = button.dataset.slot;
     const dateKey = getDateKey(selectedDate);
 
-    // Find slot info
     const slot = timeSlots.find(s => s.number == slotNum);
 
-    // Update attendance data
     if (!attendanceData[dateKey]) {
         attendanceData[dateKey] = {};
     }
 
-    // Check current status
     const currentData = attendanceData[dateKey][uniqueKey];
     const currentStatus = currentData?.status;
 
     if (currentStatus === status) {
-        // Toggle off - remove the entry
         delete attendanceData[dateKey][uniqueKey];
     } else {
-        // Set new status
         attendanceData[dateKey][uniqueKey] = {
             status: status,
             timeSlot: slot.time,
@@ -226,10 +216,9 @@ function handleTimeChange(event) {
     const isCheckIn = input.classList.contains('check-in-input');
 
     if (!attendanceData[dateKey] || !attendanceData[dateKey][uniqueKey]) {
-        return; // No attendance record exists
+        return;
     }
 
-    // Update the time
     if (isCheckIn) {
         attendanceData[dateKey][uniqueKey].checkInTime = input.value;
     } else {
@@ -282,8 +271,6 @@ async function saveAttendanceData() {
             body: JSON.stringify(dateData),
         });
 
-        console.log('Saving employee attendance data:', dateData);
-
         if (!response.ok) {
             console.error('Failed to save employee attendance data');
         }
@@ -308,7 +295,6 @@ async function exportToCSV() {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         } else {
-            console.error('Failed to export data');
             alert('Failed to export data. Please try again.');
         }
     } catch (error) {
@@ -363,26 +349,214 @@ function renderDatabaseTable(records) {
     });
 }
 
+// ===== ANALYTICS / REPORTS =====
+function initializeReportsView() {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const startDateInput = document.getElementById('reportStartDate');
+    const endDateInput = document.getElementById('reportEndDate');
+
+    startDateInput.value = formatDateForInput(firstDayOfMonth);
+    endDateInput.value = formatDateForInput(today);
+    startDateInput.max = formatDateForInput(today);
+    endDateInput.max = formatDateForInput(today);
+
+    document.getElementById('generateReportBtn').addEventListener('click', generateAnalytics);
+    generateAnalytics();
+}
+
+async function generateAnalytics() {
+    const startDate = document.getElementById('reportStartDate').value;
+    const endDate = document.getElementById('reportEndDate').value;
+
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('Start date must be before or equal to end date');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/analytics?startDate=${startDate}&endDate=${endDate}`);
+
+        if (response.ok) {
+            const data = await response.json();
+            renderAnalytics(data);
+        } else {
+            alert('Failed to generate report. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        alert('Error generating report. Make sure the server is running.');
+    }
+}
+
+function renderAnalytics(data) {
+    // Store data for CSV export
+    currentReportData = data;
+
+    document.getElementById('totalWorkingDays').textContent = data.totalWorkingDays;
+    document.getElementById('totalRecordedDays').textContent = data.totalRecordedDays;
+
+    const avgAttendance = data.employees.length > 0
+        ? (data.employees.reduce((sum, emp) => sum + emp.attendanceRate, 0) / data.employees.length).toFixed(1)
+        : 0;
+    document.getElementById('averageAttendance').textContent = avgAttendance + '%';
+
+    renderEmployeeStatsTable(data.employees);
+
+    // Show download button after report is generated
+    document.getElementById('downloadReportCsvBtn').style.display = 'inline-block';
+}
+
+function renderEmployeeStatsTable(employees) {
+    const tbody = document.getElementById('statsTableBody');
+    tbody.innerHTML = '';
+
+    if (employees.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No employee data found for selected date range</td></tr>';
+        return;
+    }
+
+    employees.forEach(emp => {
+        const row = document.createElement('tr');
+
+        let perfClass = 'perf-low';
+        let perfLabel = 'Needs Improvement';
+        if (emp.attendanceRate >= 90) {
+            perfClass = 'perf-high';
+            perfLabel = 'Excellent';
+        } else if (emp.attendanceRate >= 75) {
+            perfClass = 'perf-medium';
+            perfLabel = 'Good';
+        }
+
+        const attendanceBar = createAttendanceBar(emp.attendanceRate);
+
+        row.innerHTML = `
+            <td style="font-weight: 600; color: var(--text-primary);">${emp.name}</td>
+            <td><span class="stat-badge present-badge">${emp.presentDays}</span></td>
+            <td><span class="stat-badge absent-badge">${emp.absentDays}</span></td>
+            <td><span class="stat-badge overtime-badge">${emp.overtimeDays}</span></td>
+            <td>
+                <div class="attendance-rate-container">
+                    <span class="attendance-rate-text">${emp.attendanceRate}%</span>
+                    ${attendanceBar}
+                </div>
+            </td>
+            <td><span class="perf-indicator ${perfClass}">${perfLabel}</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function createAttendanceBar(rate) {
+    let color = '#F43F5E';
+    if (rate >= 90) color = '#10B981';
+    else if (rate >= 75) color = '#F59E0B';
+
+    return `
+        <div class="attendance-bar">
+            <div class="attendance-bar-fill" style="width: ${rate}%; background: ${color};"></div>
+        </div>
+    `;
+}
+
+// Download analytics report as CSV
+let currentReportData = null; // Store current report data
+
+function downloadReportCSV() {
+    if (!currentReportData) {
+        alert('Please generate a report first');
+        return;
+    }
+
+    const { totalWorkingDays, totalRecordedDays, dateRange, employees } = currentReportData;
+
+    // Calculate average attendance
+    const avgAttendance = employees.length > 0
+        ? (employees.reduce((sum, emp) => sum + emp.attendanceRate, 0) / employees.length).toFixed(2)
+        : 0;
+
+    // Create CSV content
+    const rows = [];
+
+    // Header section
+    rows.push(['Employee Attendance Report']);
+    rows.push(['Generated on:', new Date().toLocaleString()]);
+    rows.push(['Date Range:', `${dateRange.start} to ${dateRange.end}`]);
+    rows.push([]);
+
+    // Summary section
+    rows.push(['SUMMARY STATISTICS']);
+    rows.push(['Total Working Days (excluding Sundays):', totalWorkingDays]);
+    rows.push(['Days with Recorded Attendance:', totalRecordedDays]);
+    rows.push(['Average Attendance Rate:', `${avgAttendance}%`]);
+    rows.push([]);
+
+    // Employee statistics header
+    rows.push(['EMPLOYEE STATISTICS']);
+    rows.push(['Employee Name', 'Present Days', 'Absent Days', 'Overtime Days', 'Total Slot Attendances', 'Attendance Rate (%)', 'Performance']);
+
+    // Employee data
+    employees.forEach(emp => {
+        let performance = 'Needs Improvement';
+        if (emp.attendanceRate >= 90) {
+            performance = 'Excellent';
+        } else if (emp.attendanceRate >= 75) {
+            performance = 'Good';
+        }
+
+        rows.push([
+            emp.name,
+            emp.presentDays,
+            emp.absentDays,
+            emp.overtimeDays,
+            emp.totalSlotAttendances,
+            emp.attendanceRate,
+            performance
+        ]);
+    });
+
+    // Convert to CSV string
+    const csvContent = rows.map(row =>
+        row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `attendance-report-${dateRange.start}-to-${dateRange.end}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+}
+
 // ===== EVENT LISTENERS =====
 function setupEventListeners() {
-    // Date input change
     document.getElementById('dateInput').addEventListener('change', async (e) => {
         selectedDate = new Date(e.target.value + 'T00:00:00');
         attendanceData = await loadAttendanceData();
         renderDashboard();
     });
 
-    // Export button
     document.getElementById('exportBtn').addEventListener('click', exportToCSV);
 
-    // Tab Navigation
+    // Download report CSV button
+    document.getElementById('downloadReportCsvBtn').addEventListener('click', downloadReportCSV);
+
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            // Update active tab
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
-            // Switch Views
             document.querySelectorAll('.view-section').forEach(v => {
                 v.style.display = 'none';
                 v.classList.remove('active');
@@ -392,9 +566,10 @@ function setupEventListeners() {
             view.style.display = 'block';
             setTimeout(() => view.classList.add('active'), 10);
 
-            // Load data if switching to database view
             if (tab.dataset.tab === 'database') {
                 refreshDatabaseView();
+            } else if (tab.dataset.tab === 'reports') {
+                initializeReportsView();
             }
         });
     });

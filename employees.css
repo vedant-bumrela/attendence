@@ -169,3 +169,265 @@
         width: 100%;
     }
 }
+
+/* =========================================
+   REPORTS / ANALYTICS STYLES
+   ========================================= */
+
+.reports-header {
+    margin-bottom: 2rem;
+}
+
+.reports-header h2 {
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Date Range Selector */
+.date-range-selector {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.date-range-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-range-group label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.date-range-input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.date-range-input:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.date-range-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.summary-card .card-icon {
+    font-size: 3rem;
+    filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+}
+
+.summary-card .card-content {
+    flex: 1;
+}
+
+.summary-card .card-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.summary-card .card-label {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.summary-card .card-sublabel {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Statistics Container */
+.stats-container {
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stats-container h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+/* Statistics Table */
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.stats-table thead {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.stats-table th {
+    text-align: left;
+    padding: 1rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.stats-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Stat Badges */
+.stat-badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.present-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+}
+
+.absent-badge {
+    background: rgba(244, 63, 94, 0.2);
+    color: #F43F5E;
+}
+
+.overtime-badge {
+    background: rgba(79, 70, 229, 0.2);
+    color: #4F46E5;
+}
+
+/* Attendance Rate Container */
+.attendance-rate-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 120px;
+}
+
+.attendance-rate-text {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.attendance-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.attendance-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+/* Performance Indicators */
+.perf-indicator {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.perf-high {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+}
+
+.perf-medium {
+    background: rgba(245, 158, 11, 0.2);
+    color: #F59E0B;
+}
+
+.perf-low {
+    background: rgba(244, 63, 94, 0.2);
+    color: #F43F5E;
+}
+
+/* Responsive adjustments for reports */
+@media (max-width: 768px) {
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .date-range-selector {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .date-range-group {
+        width: 100%;
+    }
+
+    .date-range-input {
+        width: 100%;
+    }
+
+    .stats-table {
+        font-size: 0.875rem;
+    }
+
+    .stats-table th,
+    .stats-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
