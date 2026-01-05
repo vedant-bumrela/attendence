@@ -44,6 +44,12 @@ const doctors = [
         days: [1, 2, 3, 4, 5, 6], // Monday-Saturday
         slots: [4], // 5-8 PM
         timeRange: "5:00 PM - 8:00 PM"
+    },
+    {
+        name: "Mr. Rupak Marulkar",
+        days: [1, 2, 3, 4, 5], // Monday-Friday
+        slots: [2, 3], // 11 AM-5 PM (slots 2 & 3)
+        timeRange: "11:00 AM - 5:00 PM"
     }
 ];
 

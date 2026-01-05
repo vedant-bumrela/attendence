@@ -15,9 +15,9 @@ app.use(express.static(__dirname)); // Serve static files (HTML, CSS, JS)
 
 // Employee list
 const employees = [
-    { name: "Shreya Talekar" },
-    { name: "Aditi Deshpande" },
-    { name: "Vedant Bumrela" },
+    { name: "Ms. Shreya Talekar" },
+    { name: "Ms. Aditi Deshpande" },
+    { name: "Mr. Vedant Bumrela" },
     { name: "Dr. Rajendra Tippanwar" }
 ];
 

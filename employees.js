@@ -1,8 +1,8 @@
 // ===== EMPLOYEE LIST =====
 const employees = [
-    { name: "Shreya Talekar" },
-    { name: "Aditi Deshpande" },
-    { name: "Vedant Bumrela" },
+    { name: "Ms. Shreya Talekar" },
+    { name: "Ms. Aditi Deshpande" },
+    { name: "Mr. Vedant Bumrela" },
     { name: "Dr. Rajendra Tippanwar" }
 ];
 
@@ -402,11 +402,6 @@ function renderAnalytics(data) {
     document.getElementById('totalWorkingDays').textContent = data.totalWorkingDays;
     document.getElementById('totalRecordedDays').textContent = data.totalRecordedDays;
 
-    const avgAttendance = data.employees.length > 0
-        ? (data.employees.reduce((sum, emp) => sum + emp.attendanceRate, 0) / data.employees.length).toFixed(1)
-        : 0;
-    document.getElementById('averageAttendance').textContent = avgAttendance + '%';
-
     renderEmployeeStatsTable(data.employees);
 
     // Show download button after report is generated
@@ -418,22 +413,12 @@ function renderEmployeeStatsTable(employees) {
     tbody.innerHTML = '';
 
     if (employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No employee data found for selected date range</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No employee data found for selected date range</td></tr>';
         return;
     }
 
     employees.forEach(emp => {
         const row = document.createElement('tr');
-
-        let perfClass = 'perf-low';
-        let perfLabel = 'Needs Improvement';
-        if (emp.attendanceRate >= 90) {
-            perfClass = 'perf-high';
-            perfLabel = 'Excellent';
-        } else if (emp.attendanceRate >= 75) {
-            perfClass = 'perf-medium';
-            perfLabel = 'Good';
-        }
 
         const attendanceBar = createAttendanceBar(emp.attendanceRate);
 
@@ -448,7 +433,6 @@ function renderEmployeeStatsTable(employees) {
                     ${attendanceBar}
                 </div>
             </td>
-            <td><span class="perf-indicator ${perfClass}">${perfLabel}</span></td>
         `;
         tbody.appendChild(row);
     });
@@ -477,11 +461,6 @@ function downloadReportCSV() {
 
     const { totalWorkingDays, totalRecordedDays, dateRange, employees } = currentReportData;
 
-    // Calculate average attendance
-    const avgAttendance = employees.length > 0
-        ? (employees.reduce((sum, emp) => sum + emp.attendanceRate, 0) / employees.length).toFixed(2)
-        : 0;
-
     // Create CSV content
     const rows = [];
 
@@ -495,30 +474,21 @@ function downloadReportCSV() {
     rows.push(['SUMMARY STATISTICS']);
     rows.push(['Total Working Days (excluding Sundays):', totalWorkingDays]);
     rows.push(['Days with Recorded Attendance:', totalRecordedDays]);
-    rows.push(['Average Attendance Rate:', `${avgAttendance}%`]);
     rows.push([]);
 
     // Employee statistics header
     rows.push(['EMPLOYEE STATISTICS']);
-    rows.push(['Employee Name', 'Present Days', 'Absent Days', 'Overtime Days', 'Total Slot Attendances', 'Attendance Rate (%)', 'Performance']);
+    rows.push(['Employee Name', 'Present Days', 'Absent Days', 'Overtime Days', 'Total Slot Attendances', 'Attendance Rate (%)']);
 
     // Employee data
     employees.forEach(emp => {
-        let performance = 'Needs Improvement';
-        if (emp.attendanceRate >= 90) {
-            performance = 'Excellent';
-        } else if (emp.attendanceRate >= 75) {
-            performance = 'Good';
-        }
-
         rows.push([
             emp.name,
             emp.presentDays,
             emp.absentDays,
             emp.overtimeDays,
             emp.totalSlotAttendances,
-            emp.attendanceRate,
-            performance
+            emp.attendanceRate
         ]);
     });
 
