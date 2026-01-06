@@ -106,6 +106,8 @@
                             <th>Doctor Name</th>
                             <th>Status</th>
                             <th>Time Slot</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
                             <th>Recorded At</th>
                         </tr>
                     </thead>
@@ -120,7 +122,7 @@
     <!-- Manage Doctors View -->
     <div id="manageView" class="view-section" style="display: none;">
         <div class="manage-header">
-            <h2>👨‍⚕️ Manage Doctors</h2>
+            <h2>Manage Doctors</h2>
             <p style="color: var(--text-secondary); margin-top: 0.5rem;">Add, edit, or remove doctors from the
                 system</p>
         </div>
@@ -133,7 +135,7 @@
 
                 <div class="form-group">
                     <label for="doctorName">Doctor Name *</label>
-                    <input type="text" id="doctorName" placeholder="e.g., Dr. John Smith (GP)" required>
+                    <input type="text" id="doctorName" placeholder="" required>
                 </div>
 
                 <div class="form-group">
@@ -189,10 +191,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="timeRange">Time Range Display *</label>
+                    <label for="timeRange">Time Range </label>
                     <input type="text" id="timeRange" placeholder="e.g., 11:00 AM - 5:00 PM" required>
-                    <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">This is shown
-                        on the doctor's card</small>
                 </div>
 
                 <div class="form-actions">

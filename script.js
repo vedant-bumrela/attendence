@@ -413,7 +413,9 @@ async function saveAttendanceData() {
             backendData[key] = {
                 status: data.status,
                 timeSlot: data.timeSlot,
-                slotNumber: data.slotNumber
+                slotNumber: data.slotNumber,
+                checkInTime: data.checkInTime || '',
+                checkOutTime: data.checkOutTime || ''
             };
         }
     }
@@ -560,7 +562,7 @@ function setupEventListeners() {
 // ===== DATABASE VIEW =====
 async function refreshDatabaseView() {
     const tbody = document.getElementById('databaseTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading data...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading data...</td></tr>';
 
     try {
         const response = await fetch(`${API_URL}/attendance/raw`);
@@ -568,11 +570,11 @@ async function refreshDatabaseView() {
             const records = await response.json();
             renderDatabaseTable(records);
         } else {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Failed to load records</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">Failed to load records</td></tr>';
         }
     } catch (error) {
         console.error('Error loading raw data:', error);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Error connecting to server</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">Error connecting to server</td></tr>';
     }
 }
 
@@ -581,7 +583,7 @@ function renderDatabaseTable(records) {
     tbody.innerHTML = '';
 
     if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No records found in database</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No records found in database</td></tr>';
         return;
     }
 
@@ -595,6 +597,8 @@ function renderDatabaseTable(records) {
             <td style="font-weight: 500; color: var(--text-primary);">${record.doctorName}</td>
             <td><span class="status-badge ${record.status}">${record.status}</span></td>
             <td>${record.timeSlot || 'N/A'}</td>
+            <td>${record.checkInTime || 'N/A'}</td>
+            <td>${record.checkOutTime || 'N/A'}</td>
             <td style="font-size: 0.8rem; color: var(--text-secondary);">${createdAt.toLocaleString()}</td>
         `;
         tbody.appendChild(row);

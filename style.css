@@ -397,6 +397,18 @@ body {
   color: #F43F5E;
 }
 
+.db-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.db-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
 /* =========================================
    DOCTOR MANAGEMENT
    ========================================= */

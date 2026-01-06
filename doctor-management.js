@@ -119,8 +119,8 @@ function renderDoctorsList() {
                     <p><strong>Time:</strong> ${doctor.timeRange}</p>
                 </div>
                 <div class="doctor-item-actions">
-                    <button class="btn-icon btn-edit" onclick="editDoctorForm(${index})">✏️ Edit</button>
-                    <button class="btn-icon btn-delete" onclick="deleteDoctor(${index})">🗑️ Delete</button>
+                    <button class="btn-icon btn-edit" onclick="editDoctorForm(${index})">Edit</button>
+                    <button class="btn-icon btn-delete" onclick="deleteDoctor(${index})">Delete</button>
                 </div>
             </div>
         `;
