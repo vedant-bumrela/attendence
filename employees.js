@@ -1,17 +1,16 @@
 // ===== EMPLOYEE LIST =====
 const employees = [
-    { name: "Ms. Shreya Talekar" },
-    { name: "Ms. Aditi Deshpande" },
-    { name: "Mr. Vedant Bumrela" },
-    { name: "Dr. Rajendra Tippanwar" }
+    { name: "Ms. Shreya Talekar", standardHours: 6 },      // Full-time: 6 hours
+    { name: "Ms. Aditi Deshpande", standardHours: 6 },     // Full-time: 6 hours
+    { name: "Mr. Vedant Bumrela", standardHours: 3 },      // Part-time: 3 hours
+    { name: "Dr. Rajendra Tippanwar", standardHours: 6 }   // Full-time: 6 hours
 ];
 
 // Time slots configuration
 const timeSlots = [
     { number: 1, name: "Morning Shift", time: "8:00 AM - 2:00 PM" },
     { number: 2, name: "Day Shift", time: "11:00 AM - 5:00 PM" },
-    { number: 3, name: "Evening Shift", time: "5:00 PM - 8:00 PM" },
-    { number: 4, name: "Overtime Shift", time: "2:00 PM - 8:00 PM" }
+    { number: 3, name: "Evening Shift", time: "5:00 PM - 8:00 PM" }
 ];
 
 // ===== STATE MANAGEMENT =====
@@ -58,6 +57,30 @@ function isSunday(date) {
     return date.getDay() === 0;
 }
 
+// ===== OVERTIME CALCULATION =====
+function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
+    if (!checkInTime || !checkOutTime) return 0;
+
+    // Parse times (format: "HH:MM")
+    const [inHour, inMin] = checkInTime.split(':').map(Number);
+    const [outHour, outMin] = checkOutTime.split(':').map(Number);
+
+    // Calculate total minutes worked
+    const totalMinutes = (outHour * 60 + outMin) - (inHour * 60 + inMin);
+    const hoursWorked = totalMinutes / 60;
+
+    // Calculate overtime (hours worked - standard hours)
+    const overtime = Math.max(0, hoursWorked - standardHours);
+
+    return parseFloat(overtime.toFixed(2));
+}
+
+function formatOvertimeDisplay(overtimeHours) {
+    if (overtimeHours <= 0) return '';
+    return `+${overtimeHours} hrs OT`;
+}
+
+
 // ===== RENDERING =====
 function renderDashboard() {
     updateDateDisplay();
@@ -89,7 +112,7 @@ function renderEmployeeSlots() {
     const dateKey = getDateKey(selectedDate);
 
     // Clear all slots
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 3; i++) {
         document.getElementById(`slot${i}`).innerHTML = '';
     }
 
@@ -115,10 +138,15 @@ function createEmployeeCard(employee, dateKey, slot) {
     const checkInTime = attendanceInfo.checkInTime || '';
     const checkOutTime = attendanceInfo.checkOutTime || '';
 
+    // Calculate overtime
+    const overtimeHours = calculateOvertimeHours(checkInTime, checkOutTime, employee.standardHours);
+    const overtimeDisplay = formatOvertimeDisplay(overtimeHours);
+
     card.innerHTML = `
         <div class="employee-info">
             <div class="employee-name">${employee.name}</div>
             <div class="employee-shift">${slot.name}</div>
+            ${overtimeDisplay ? `<div class="overtime-indicator">${overtimeDisplay}</div>` : ''}
         </div>
         <div class="attendance-controls">
             <button class="attendance-btn ${currentStatus === 'present' ? 'present active' : 'present'}" 
@@ -145,6 +173,7 @@ function createEmployeeCard(employee, dateKey, slot) {
                        data-unique-key="${uniqueKey}"
                        data-employee="${employee.name}"
                        data-slot="${slot.number}"
+                       data-standard-hours="${employee.standardHours}"
                        ${currentStatus !== 'present' ? 'disabled' : ''}>
             </div>
             <div class="time-input-group">
@@ -155,6 +184,7 @@ function createEmployeeCard(employee, dateKey, slot) {
                        data-unique-key="${uniqueKey}"
                        data-employee="${employee.name}"
                        data-slot="${slot.number}"
+                       data-standard-hours="${employee.standardHours}"
                        ${currentStatus !== 'present' ? 'disabled' : ''}>
             </div>
         </div>
@@ -226,6 +256,8 @@ function handleTimeChange(event) {
     }
 
     saveAttendanceData();
+
+    renderDashboard();
 }
 
 function getAttendanceInfo(dateKey, key) {
@@ -327,7 +359,7 @@ function renderDatabaseTable(records) {
     tbody.innerHTML = '';
 
     if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No records found in database</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No records found in database</td></tr>';
         return;
     }
 
@@ -336,6 +368,10 @@ function renderDatabaseTable(records) {
         const date = new Date(record.date);
         const createdAt = new Date(record.createdAt);
 
+        const overtimeDisplay = record.overtimeHours > 0
+            ? `<span style="color: #F59E0B; font-weight: 600;">+${record.overtimeHours}</span>`
+            : '-';
+
         row.innerHTML = `
             <td>${formatDateForDisplay(date)}</td>
             <td style="font-weight: 500; color: var(--text-primary);">${record.employeeName}</td>
@@ -343,6 +379,7 @@ function renderDatabaseTable(records) {
             <td>${record.timeSlot || 'N/A'}</td>
             <td>${record.checkInTime || 'N/A'}</td>
             <td>${record.checkOutTime || 'N/A'}</td>
+            <td>${overtimeDisplay}</td>
             <td style="font-size: 0.8rem; color: var(--text-secondary);">${createdAt.toLocaleString()}</td>
         `;
         tbody.appendChild(row);
@@ -426,7 +463,7 @@ function renderEmployeeStatsTable(employees) {
             <td style="font-weight: 600; color: var(--text-primary);">${emp.name}</td>
             <td><span class="stat-badge present-badge">${emp.presentDays}</span></td>
             <td><span class="stat-badge absent-badge">${emp.absentDays}</span></td>
-            <td><span class="stat-badge overtime-badge">${emp.overtimeDays}</span></td>
+            <td><span class="stat-badge" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">${emp.totalOvertimeHours || 0} hrs</span></td>
             <td>
                 <div class="attendance-rate-container">
                     <span class="attendance-rate-text">${emp.attendanceRate}%</span>
@@ -478,7 +515,7 @@ function downloadReportCSV() {
 
     // Employee statistics header
     rows.push(['EMPLOYEE STATISTICS']);
-    rows.push(['Employee Name', 'Present Days', 'Absent Days', 'Overtime Days', 'Total Slot Attendances', 'Attendance Rate (%)']);
+    rows.push(['Employee Name', 'Present Days', 'Absent Days', 'Total Overtime Hours', 'Total Slot Attendances', 'Attendance Rate (%)']);
 
     // Employee data
     employees.forEach(emp => {
@@ -486,7 +523,7 @@ function downloadReportCSV() {
             emp.name,
             emp.presentDays,
             emp.absentDays,
-            emp.overtimeDays,
+            emp.totalOvertimeHours || 0,
             emp.totalSlotAttendances,
             emp.attendanceRate
         ]);

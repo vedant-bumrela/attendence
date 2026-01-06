@@ -24,6 +24,12 @@ const attendanceSchema = new mongoose.Schema({
     },
     slotName: {
         type: String
+    },
+    checkInTime: {
+        type: String  // HH:MM format, e.g., "08:30"
+    },
+    checkOutTime: {
+        type: String  // HH:MM format, e.g., "14:00"
     }
 }, {
     timestamps: true // Automatically adds createdAt and updatedAt

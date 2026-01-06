@@ -21,6 +21,7 @@
             <div class="nav-tabs">
                 <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
                 <button class="nav-tab" data-tab="database">Database Records</button>
+                <button class="nav-tab" data-tab="manage">Manage Doctors</button>
             </div>
 
             <div class="header-controls">
@@ -116,6 +117,101 @@
         </div>
     </main>
 
+    <!-- Manage Doctors View -->
+    <div id="manageView" class="view-section" style="display: none;">
+        <div class="manage-header">
+            <h2>👨‍⚕️ Manage Doctors</h2>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Add, edit, or remove doctors from the
+                system</p>
+        </div>
+
+        <!-- Add Doctor Form -->
+        <div class="doctor-form-card">
+            <h3 id="formTitle">Add New Doctor</h3>
+            <form id="doctorForm">
+                <input type="hidden" id="editIndex" value="">
+
+                <div class="form-group">
+                    <label for="doctorName">Doctor Name *</label>
+                    <input type="text" id="doctorName" placeholder="e.g., Dr. John Smith (GP)" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Working Days *</label>
+                    <div class="slot-checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="1" checked>
+                            <span>Mon</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="2" checked>
+                            <span>Tue</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="3" checked>
+                            <span>Wed</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="4" checked>
+                            <span>Thu</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="5" checked>
+                            <span>Fri</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="6" checked>
+                            <span>Sat</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Time Slots *</label>
+                    <div class="slot-checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="slots" value="1">
+                            <span>S1 (8-11 AM)</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="slots" value="2">
+                            <span>S2 (11-2 PM)</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="slots" value="3">
+                            <span>S3 (2-5 PM)</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="slots" value="4">
+                            <span>S4 (5-8 PM)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="timeRange">Time Range Display *</label>
+                    <input type="text" id="timeRange" placeholder="e.g., 11:00 AM - 5:00 PM" required>
+                    <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">This is shown
+                        on the doctor's card</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <span id="submitBtnText">Add Doctor</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="cancelBtn"
+                        style="display: none;">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Doctors List -->
+        <div class="doctors-list-card">
+            <h3>Current Doctors</h3>
+            <div id="doctorsList"></div>
+        </div>
+    </div>
+
     <!-- History Modal -->
     <div class="modal" id="historyModal">
         <div class="modal-content">
@@ -141,6 +237,7 @@
     </div>
 
     <script src="script.js"></script>
+    <script src="doctor-management.js"></script>
 </body>
 
 </html>

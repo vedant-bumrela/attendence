@@ -13,13 +13,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname)); // Serve static files (HTML, CSS, JS)
 
-// Employee list
+// Employee list with standard working hours
 const employees = [
-    { name: "Ms. Shreya Talekar" },
-    { name: "Ms. Aditi Deshpande" },
-    { name: "Mr. Vedant Bumrela" },
-    { name: "Dr. Rajendra Tippanwar" }
+    { name: "Ms. Shreya Talekar", standardHours: 6 },
+    { name: "Ms. Aditi Deshpande", standardHours: 6 },
+    { name: "Mr. Vedant Bumrela", standardHours: 3 },
+    { name: "Dr. Rajendra Tippanwar", standardHours: 6 }
 ];
+
+// Helper: Calculate overtime hours
+function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
+    if (!checkInTime || !checkOutTime) return 0;
+
+    const [inHour, inMin] = checkInTime.split(':').map(Number);
+    const [outHour, outMin] = checkOutTime.split(':').map(Number);
+
+    const totalMinutes = (outHour * 60 + outMin) - (inHour * 60 + inMin);
+    const hoursWorked = totalMinutes / 60;
+    const overtime = Math.max(0, hoursWorked - standardHours);
+
+    return parseFloat(overtime.toFixed(2));
+}
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/attendance';
@@ -70,7 +84,9 @@ function formatAttendanceData(records) {
         formatted[record.date][key] = {
             status: record.status,
             timeSlot: record.timeSlot,
-            slotNumber: record.slotNumber
+            slotNumber: record.slotNumber,
+            checkInTime: record.checkInTime || '',
+            checkOutTime: record.checkOutTime || ''
         };
     });
     return formatted;
@@ -142,7 +158,9 @@ app.post('/api/attendance/:date', async (req, res) => {
                     doctorName,
                     status: data,
                     timeSlot: 'N/A',
-                    slotNumber
+                    slotNumber,
+                    checkInTime: '',
+                    checkOutTime: ''
                 };
             } else {
                 return {
@@ -150,7 +168,9 @@ app.post('/api/attendance/:date', async (req, res) => {
                     doctorName,
                     status: data.status,
                     timeSlot: data.timeSlot || 'N/A',
-                    slotNumber: data.slotNumber || slotNumber
+                    slotNumber: data.slotNumber || slotNumber,
+                    checkInTime: data.checkInTime || '',
+                    checkOutTime: data.checkOutTime || ''
                 };
             }
         });
@@ -318,6 +338,17 @@ app.post('/api/employees/attendance/:date', async (req, res) => {
             // Extract employee name from key (format: "EmployeeName_SlotX")
             const employeeName = key.substring(0, key.lastIndexOf('_Slot'));
 
+            // Find employee to get standard hours
+            const employee = employees.find(emp => emp.name === employeeName);
+            const standardHours = employee ? employee.standardHours : 6; // Default to 6 if not found
+
+            // Calculate overtime
+            const overtimeHours = calculateOvertimeHours(
+                data.checkInTime || '',
+                data.checkOutTime || '',
+                standardHours
+            );
+
             recordsToInsert.push({
                 date,
                 employeeName,
@@ -325,7 +356,8 @@ app.post('/api/employees/attendance/:date', async (req, res) => {
                 timeSlot: data.timeSlot || data.slotName,
                 slotNumber: data.slotNumber,
                 checkInTime: data.checkInTime || '',
-                checkOutTime: data.checkOutTime || ''
+                checkOutTime: data.checkOutTime || '',
+                overtimeHours: overtimeHours
             });
         }
 
@@ -416,8 +448,8 @@ app.get('/api/employees/analytics', async (req, res) => {
                 name: emp.name,
                 presentDays: new Set(),
                 absentDays: new Set(),
-                overtimeDays: 0,
-                totalSlotAttendances: 0
+                totalSlotAttendances: 0,
+                totalOvertimeHours: 0
             };
         });
 
@@ -429,8 +461,8 @@ app.get('/api/employees/analytics', async (req, res) => {
                     name: empName,
                     presentDays: new Set(),
                     absentDays: new Set(),
-                    overtimeDays: 0,
-                    totalSlotAttendances: 0
+                    totalSlotAttendances: 0,
+                    totalOvertimeHours: 0
                 };
             }
 
@@ -438,9 +470,9 @@ app.get('/api/employees/analytics', async (req, res) => {
                 employeeStats[empName].presentDays.add(record.date);
                 employeeStats[empName].totalSlotAttendances++;
 
-                // Check if this is overtime (slot 4)
-                if (record.slotNumber === 4) {
-                    employeeStats[empName].overtimeDays++;
+                // Add overtime hours
+                if (record.overtimeHours) {
+                    employeeStats[empName].totalOvertimeHours += record.overtimeHours;
                 }
             } else if (record.status === 'absent') {
                 employeeStats[empName].absentDays.add(record.date);
@@ -459,9 +491,9 @@ app.get('/api/employees/analytics', async (req, res) => {
                 name: emp.name,
                 presentDays: presentDaysCount,
                 absentDays: absentDaysCount,
-                overtimeDays: emp.overtimeDays,
                 attendanceRate: parseFloat(attendanceRate),
-                totalSlotAttendances: emp.totalSlotAttendances
+                totalSlotAttendances: emp.totalSlotAttendances,
+                totalOvertimeHours: parseFloat(emp.totalOvertimeHours.toFixed(2))
             };
         });
 

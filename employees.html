@@ -87,23 +87,13 @@
                     </div>
                     <div class="employees-grid" id="slot3"></div>
                 </div>
-
-                <!-- Slot 4: 2PM-8PM (Overtime) -->
-                <div class="slot-section">
-                    <div class="slot-header">
-                        <div class="slot-icon"></div>
-                        <h3>Overtime Shift</h3>
-                        <span class="slot-time">2:00 PM - 8:00 PM</span>
-                    </div>
-                    <div class="employees-grid" id="slot4"></div>
-                </div>
             </div>
         </div>
 
         <!-- VIEW: Database Records -->
         <div id="databaseView" class="view-section" style="display: none;">
             <div class="db-header">
-                <h2>MongoDB Records</h2>
+                <h2>Records</h2>
                 <button class="btn btn-secondary" onclick="refreshDatabaseView()">Refresh Data</button>
             </div>
             <div class="table-container">
@@ -116,6 +106,7 @@
                             <th>Time Slot</th>
                             <th>Check-In</th>
                             <th>Check-Out</th>
+                            <th>Overtime Hrs</th>
                             <th>Recorded At</th>
                         </tr>
                     </thead>
@@ -129,7 +120,7 @@
         <!-- VIEW: Reports -->
         <div id="reportsView" class="view-section" style="display: none;">
             <div class="reports-header">
-                <h2>📊 Attendance Reports & Analytics</h2>
+                <h2> Attendance Reports & Analytics</h2>
                 <div class="date-range-selector">
                     <div class="date-range-group">
                         <label>From Date</label>
@@ -176,7 +167,7 @@
                                 <th>Employee</th>
                                 <th>Present Days</th>
                                 <th>Absent Days</th>
-                                <th>Overtime Days</th>
+                                <th>Total OT Hours</th>
                                 <th>Attendance Rate</th>
                             </tr>
                         </thead>

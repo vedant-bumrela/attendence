@@ -1,57 +1,110 @@
 // ===== DOCTOR SCHEDULES =====
-const doctors = [
+const DEFAULT_DOCTORS = [
     {
-        name: "Dr. Rajendra Tippanawar",
-        days: [1, 2, 3, 4, 5, 6], // Monday-Saturday
-        slots: [2, 3], // 11 AM-2 PM and 2-5 PM
+        name: "Dr. Rajendra Tippanawar (GP)",
+        days: [1, 2, 3, 4, 5, 6],
+        slots: [2, 3],
         timeRange: "11:00 AM - 5:00 PM"
     },
     {
-        name: "Dr. Maneesha Mhamane-Atre",
-        days: [3, 6], // Wednesday and Saturday
-        slots: [2], // 11 AM-2 PM (default)
+        name: "Dr. Maneesha Mhamane-Atre (Homeopath)",
+        days: [3, 6],
+        slots: [2],
         specialSchedule: {
-            6: [2, 3] // Saturday: 11 AM-5 PM (slots 2 & 3)
+            6: [2, 3]
         },
         timeRange: "11:00 AM - 2:00 PM (Wed), 11:00 AM - 5:00 PM (Sat)"
     },
     {
         name: "Dr. Ritesh Damle",
-        days: [1, 4], // Monday and Thursday
-        slots: [1], // 8 AM-11 AM
+        days: [1, 4],
+        slots: [1],
         timeRange: "8:00 AM - 11:00 AM"
     },
     {
-        name: "Dr. Madhu Kabadge",
-        days: [2, 4], // Tuesday and Thursday
-        slots: [2], // 11 AM-2 PM
+        name: "Dr. Madhu Kabadge (Homeopath)",
+        days: [2, 4],
+        slots: [2],
         timeRange: "11:00 AM - 2:00 PM"
     },
     {
-        name: "Dr. Prajakta Deshmukh",
-        days: [3, 5], // Wednesday and Friday
-        slots: [3], // 2-5 PM
+        name: "Dr. Prajakta Deshmukh (Gynacologist)",
+        days: [3, 5],
+        slots: [3],
         timeRange: "2:00 PM - 5:00 PM"
     },
     {
-        name: "Dr. Chaitanya Bhujbal",
-        days: [1, 2, 3, 4, 5, 6], // Monday-Saturday
-        slots: [2, 3], // 11 AM-5 PM (slots 2 & 3)
+        name: "Dr. Chaitanya Bhujbal (GP)",
+        days: [2, 3, 4],
+        slots: [2, 3],
         timeRange: "11:00 AM - 5:00 PM"
     },
     {
-        name: "Dr. Apeksha Thakar",
-        days: [1, 2, 3, 4, 5, 6], // Monday-Saturday
-        slots: [4], // 5-8 PM
+        name: "Dr. Apeksha Thakar (Ayurveda)",
+        days: [1, 2, 3, 4, 5, 6],
+        slots: [4],
         timeRange: "5:00 PM - 8:00 PM"
     },
     {
-        name: "Mr. Rupak Marulkar",
-        days: [1, 2, 3, 4, 5], // Monday-Friday
-        slots: [2, 3], // 11 AM-5 PM (slots 2 & 3)
+        name: "Mr. Rupak Marulkar (Yoga and Nutritionist)",
+        days: [1, 2, 3, 4, 5],
+        slots: [2, 3],
         timeRange: "11:00 AM - 5:00 PM"
     }
 ];
+
+let doctors = [];
+
+// Load doctors from localStorage or use defaults
+function loadDoctorsFromStorage() {
+    const stored = localStorage.getItem('clinic_doctors');
+    if (stored) {
+        try {
+            doctors = JSON.parse(stored);
+        } catch (e) {
+            console.error('Error loading doctors:', e);
+            doctors = [...DEFAULT_DOCTORS];
+            saveDoctorsToStorage();
+        }
+    } else {
+        doctors = [...DEFAULT_DOCTORS];
+        saveDoctorsToStorage();
+    }
+}
+
+// Save doctors to localStorage
+function saveDoctorsToStorage() {
+    localStorage.setItem('clinic_doctors', JSON.stringify(doctors));
+}
+
+// Add new doctor
+function addDoctor(doctorData) {
+    doctors.push(doctorData);
+    saveDoctorsToStorage();
+    renderDoctorsList();
+    renderDashboard();
+}
+
+// Edit existing doctor
+function editDoctor(index, doctorData) {
+    doctors[index] = doctorData;
+    saveDoctorsToStorage();
+    renderDoctorsList();
+    renderDashboard();
+}
+
+// Delete doctor
+function deleteDoctor(index) {
+    if (confirm(`Are you sure you want to delete ${doctors[index].name}?`)) {
+        doctors.splice(index, 1);
+        saveDoctorsToStorage();
+        renderDoctorsList();
+        renderDashboard();
+    }
+}
+
+// Initialize doctors on load
+loadDoctorsFromStorage();
 
 // ===== STATE MANAGEMENT =====
 let selectedDate = new Date();
@@ -159,6 +212,9 @@ function createDoctorCard(doctor, dateKey, slotNum) {
 
     // Check attendance using unique key ONLY
     const currentStatus = getAttendanceStatus(dateKey, uniqueKey);
+    const attendanceInfo = getAttendanceInfo(dateKey, uniqueKey);
+    const checkInTime = attendanceInfo.checkInTime || '';
+    const checkOutTime = attendanceInfo.checkOutTime || '';
 
     card.innerHTML = `
         <div class="doctor-info">
@@ -181,6 +237,28 @@ function createDoctorCard(doctor, dateKey, slotNum) {
                 Absent
             </button>
         </div>
+        <div class="time-inputs">
+            <div class="time-input-group">
+                <label>Check-In</label>
+                <input type="time" 
+                       class="time-input check-in-input" 
+                       value="${checkInTime}"
+                       data-unique-key="${uniqueKey}"
+                       data-doctor="${doctor.name}"
+                       data-slot="${slotNum}"
+                       ${currentStatus !== 'present' ? 'disabled' : ''}>
+            </div>
+            <div class="time-input-group">
+                <label>Check-Out</label>
+                <input type="time" 
+                       class="time-input check-out-input" 
+                       value="${checkOutTime}"
+                       data-unique-key="${uniqueKey}"
+                       data-doctor="${doctor.name}"
+                       data-slot="${slotNum}"
+                       ${currentStatus !== 'present' ? 'disabled' : ''}>
+            </div>
+        </div>
     `;
 
     // Add click handlers directly to buttons
@@ -188,6 +266,13 @@ function createDoctorCard(doctor, dateKey, slotNum) {
     buttons.forEach(btn => {
         btn.addEventListener('click', handleAttendanceClick);
     });
+
+    // Add time input handlers
+    const checkInInput = card.querySelector('.check-in-input');
+    const checkOutInput = card.querySelector('.check-out-input');
+
+    checkInInput.addEventListener('change', handleTimeChange);
+    checkOutInput.addEventListener('change', handleTimeChange);
 
     return card;
 }
@@ -239,7 +324,9 @@ function handleAttendanceClick(event) {
             status: status,
             timeSlot: slotTime,
             slotName: slotHeader,
-            slotNumber: parseInt(slotNum)
+            slotNumber: parseInt(slotNum),
+            checkInTime: (currentData && currentData.checkInTime) || '',
+            checkOutTime: (currentData && currentData.checkOutTime) || ''
         };
     }
 
@@ -257,6 +344,40 @@ function getAttendanceStatus(dateKey, key) {
     }
     return null;
 }
+
+function getAttendanceInfo(dateKey, key) {
+    const data = attendanceData[dateKey]?.[key];
+    if (data && typeof data === 'object') {
+        return {
+            status: data.status,
+            checkInTime: data.checkInTime || '',
+            checkOutTime: data.checkOutTime || ''
+        };
+    }
+    return { status: null, checkInTime: '', checkOutTime: '' };
+}
+
+// Handle time input changes
+function handleTimeChange(event) {
+    const input = event.currentTarget;
+    const uniqueKey = input.dataset.uniqueKey;
+    const dateKey = getDateKey(selectedDate);
+    const isCheckIn = input.classList.contains('check-in-input');
+
+    if (!attendanceData[dateKey] || !attendanceData[dateKey][uniqueKey]) {
+        return;
+    }
+
+    if (isCheckIn) {
+        attendanceData[dateKey][uniqueKey].checkInTime = input.value;
+    } else {
+        attendanceData[dateKey][uniqueKey].checkOutTime = input.value;
+    }
+
+    saveAttendanceData();
+    renderDashboard();
+}
+
 
 // ===== DATA PERSISTENCE =====
 const API_URL = 'http://localhost:3000/api';

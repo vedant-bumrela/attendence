@@ -69,6 +69,20 @@
     color: var(--text-secondary);
 }
 
+/* Overtime Indicator */
+.overtime-indicator {
+    font-size: 0.75rem;
+    color: #F59E0B;
+    font-weight: 600;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(245, 158, 11, 0.15);
+    border-radius: 6px;
+    display: inline-block;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+
 /* Time Inputs Section */
 .time-inputs {
     display: grid;

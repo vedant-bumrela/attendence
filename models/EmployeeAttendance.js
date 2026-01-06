@@ -27,6 +27,10 @@ const employeeAttendanceSchema = new mongoose.Schema({
     },
     checkOutTime: {
         type: String  // HH:MM format, e.g., "14:00"
+    },
+    overtimeHours: {
+        type: Number,  // Calculated overtime hours (decimal)
+        default: 0
     }
 }, {
     timestamps: true // Automatically adds createdAt and updatedAt
