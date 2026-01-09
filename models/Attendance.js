@@ -30,6 +30,12 @@ const attendanceSchema = new mongoose.Schema({
     },
     checkOutTime: {
         type: String  // HH:MM format, e.g., "14:00"
+    },
+    cabinNumber: {
+        type: Number,
+        min: 1,
+        max: 9,
+        sparse: true  // Allow null for records without cabin assignment
     }
 }, {
     timestamps: true // Automatically adds createdAt and updatedAt

@@ -27,7 +27,7 @@
                 <h2 class="card-title">Doctor Attendance</h2>
                 <p class="card-description"></p>
                 <div class="card-footer">
-                    <span class="card-badge">8 Doctors</span>
+                    <span class="card-badge" id="doctorCount">Loading...</span>
                     <span class="card-arrow">→</span>
                 </div>
             </a>
@@ -38,12 +38,54 @@
                 <h2 class="card-title">Employee Attendance</h2>
                 <p class="card-description"></p>
                 <div class="card-footer">
-                    <span class="card-badge">4 Employees</span>
+                    <span class="card-badge" id="employeeCount">Loading...</span>
                     <span class="card-arrow">→</span>
                 </div>
             </a>
         </main>
     </div>
+
+    <script>
+        // Dynamically load counts from localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            // Count Doctors
+            const storedDoctors = localStorage.getItem('clinic_doctors');
+            let doctorCount = 0;
+            if (storedDoctors) {
+                try {
+                    const doctors = JSON.parse(storedDoctors);
+                    // Count only active doctors
+                    doctorCount = doctors.filter(d => d.isActive !== false).length;
+                } catch (e) {
+                    doctorCount = 0;
+                }
+            }
+            document.getElementById('doctorCount').textContent = `${doctorCount} Doctor${doctorCount !== 1 ? 's' : ''}`;
+
+            // Count Employees
+            const storedEmployees = localStorage.getItem('clinic_employees');
+            const storedOtherStaff = localStorage.getItem('clinic_other_staff');
+            let employeeCount = 0;
+
+            if (storedEmployees) {
+                try {
+                    employeeCount += JSON.parse(storedEmployees).length;
+                } catch (e) { }
+            }
+            if (storedOtherStaff) {
+                try {
+                    employeeCount += JSON.parse(storedOtherStaff).length;
+                } catch (e) { }
+            }
+
+            // Default fallback if no data in localStorage
+            if (employeeCount === 0 && !storedEmployees) {
+                employeeCount = 5; // Default employees
+            }
+
+            document.getElementById('employeeCount').textContent = `${employeeCount} Employee${employeeCount !== 1 ? 's' : ''}`;
+        });
+    </script>
 </body>
 
 </html>

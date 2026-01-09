@@ -4,7 +4,9 @@ const DEFAULT_DOCTORS = [
         name: "Dr. Rajendra Tippanawar (GP)",
         days: [1, 2, 3, 4, 5, 6],
         slots: [2, 3],
-        timeRange: "11:00 AM - 5:00 PM"
+        timeRange: "11:00 AM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Dr. Maneesha Mhamane-Atre (Homeopath)",
@@ -13,43 +15,57 @@ const DEFAULT_DOCTORS = [
         specialSchedule: {
             6: [2, 3]
         },
-        timeRange: "11:00 AM - 2:00 PM (Wed), 11:00 AM - 5:00 PM (Sat)"
+        timeRange: "11:00 AM - 2:00 PM (Wed), 11:00 AM - 5:00 PM (Sat)",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Dr. Ritesh Damle",
         days: [1, 4],
         slots: [1],
-        timeRange: "8:00 AM - 11:00 AM"
+        timeRange: "8:00 AM - 11:00 AM",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Dr. Madhu Kabadge (Homeopath)",
         days: [2, 4],
         slots: [2],
-        timeRange: "11:00 AM - 2:00 PM"
+        timeRange: "11:00 AM - 2:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Dr. Prajakta Deshmukh (Gynacologist)",
         days: [3, 5],
         slots: [3],
-        timeRange: "2:00 PM - 5:00 PM"
+        timeRange: "2:00 PM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Dr. Chaitanya Bhujbal (GP)",
         days: [2, 3, 4],
         slots: [2, 3],
-        timeRange: "11:00 AM - 5:00 PM"
+        timeRange: "11:00 AM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Dr. Apeksha Thakar (Ayurveda)",
         days: [1, 2, 3, 4, 5, 6],
         slots: [4],
-        timeRange: "5:00 PM - 8:00 PM"
+        timeRange: "5:00 PM - 8:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
     },
     {
         name: "Mr. Rupak Marulkar (Yoga and Nutritionist)",
         days: [1, 2, 3, 4, 5],
         slots: [2, 3],
-        timeRange: "11:00 AM - 5:00 PM"
+        timeRange: "11:00 AM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
     }
 ];
 
@@ -93,14 +109,15 @@ function editDoctor(index, doctorData) {
     renderDashboard();
 }
 
-// Delete doctor
-function deleteDoctor(index) {
-    if (confirm(`Are you sure you want to delete ${doctors[index].name}?`)) {
-        doctors.splice(index, 1);
-        saveDoctorsToStorage();
-        renderDoctorsList();
-        renderDashboard();
-    }
+// Toggle doctor active/inactive status
+function toggleDoctorStatus(index) {
+    const doctor = doctors[index];
+    const newStatus = !(doctor.active !== false);
+
+    doctors[index].active = newStatus;
+    saveDoctorsToStorage();
+    renderDoctorsList();
+    renderDashboard();
 }
 
 // Initialize doctors on load
@@ -166,8 +183,13 @@ function renderDoctorSlots() {
         document.getElementById(`slot${i}`).innerHTML = '';
     }
 
-    // Get doctors scheduled for this day
-    const scheduledDoctors = doctors.filter(doctor => doctor.days.includes(dayOfWeek));
+    // Get doctors scheduled for this day AND who have joined by this date AND are active
+    const scheduledDoctors = doctors.filter(doctor => {
+        const worksOnThisDay = doctor.days.includes(dayOfWeek);
+        const hasJoined = !doctor.joiningDate || new Date(dateKey) >= new Date(doctor.joiningDate);
+        const isActive = doctor.active !== false; // Default to true if not set
+        return worksOnThisDay && hasJoined && isActive;
+    });
 
     if (scheduledDoctors.length === 0) {
         showEmptyState();
@@ -215,11 +237,12 @@ function createDoctorCard(doctor, dateKey, slotNum) {
     const attendanceInfo = getAttendanceInfo(dateKey, uniqueKey);
     const checkInTime = attendanceInfo.checkInTime || '';
     const checkOutTime = attendanceInfo.checkOutTime || '';
+    const cabinNumber = attendanceInfo.cabinNumber || '';
 
     card.innerHTML = `
         <div class="doctor-info">
             <div class="doctor-name">${doctor.name}</div>
-            <div class="doctor-time">${doctor.timeRange}</div>
+            <div class="doctor-time">${doctor.timeRange}${doctor.cabinNumber ? `<span class="cabin-badge">${doctor.cabinNumber}</span>` : ''}</div>
         </div>
         <div class="attendance-controls">
             <button class="attendance-btn ${currentStatus === 'present' ? 'present active' : 'present'}" 
@@ -351,10 +374,11 @@ function getAttendanceInfo(dateKey, key) {
         return {
             status: data.status,
             checkInTime: data.checkInTime || '',
-            checkOutTime: data.checkOutTime || ''
+            checkOutTime: data.checkOutTime || '',
+            cabinNumber: data.cabinNumber || null
         };
     }
-    return { status: null, checkInTime: '', checkOutTime: '' };
+    return { status: null, checkInTime: '', checkOutTime: '', cabinNumber: null };
 }
 
 // Handle time input changes
@@ -375,6 +399,26 @@ function handleTimeChange(event) {
     }
 
     saveAttendanceData();
+    renderDashboard();
+}
+
+// Handle cabin selection changes
+function handleCabinChange(event) {
+    const select = event.currentTarget;
+    const uniqueKey = select.dataset.uniqueKey;
+    const slotNum = select.dataset.slot;
+    const dateKey = getDateKey(selectedDate);
+    const cabinNumber = select.value ? parseInt(select.value) : null;
+
+    if (!attendanceData[dateKey] || !attendanceData[dateKey][uniqueKey]) {
+        return;
+    }
+
+    // Update cabin number in attendance data
+    attendanceData[dateKey][uniqueKey].cabinNumber = cabinNumber;
+
+    saveAttendanceData();
+    // Re-render to show updates
     renderDashboard();
 }
 
@@ -415,7 +459,8 @@ async function saveAttendanceData() {
                 timeSlot: data.timeSlot,
                 slotNumber: data.slotNumber,
                 checkInTime: data.checkInTime || '',
-                checkOutTime: data.checkOutTime || ''
+                checkOutTime: data.checkOutTime || '',
+                cabinNumber: data.cabinNumber || null
             };
         }
     }
@@ -583,7 +628,7 @@ function renderDatabaseTable(records) {
     tbody.innerHTML = '';
 
     if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No records found in database</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No records found in database</td></tr>';
         return;
     }
 
@@ -596,7 +641,8 @@ function renderDatabaseTable(records) {
             <td>${formatDateForDisplay(date)}</td>
             <td style="font-weight: 500; color: var(--text-primary);">${record.doctorName}</td>
             <td><span class="status-badge ${record.status}">${record.status}</span></td>
-            <td>${record.timeSlot || 'N/A'}</td>
+            <td>${record.slotNumber ? `S${record.slotNumber}` : (record.timeSlot || 'N/A')}</td>
+            <td>${record.cabinNumber ? `<span class="cabin-badge">Cabin ${record.cabinNumber}</span>` : '<span style="color: var(--text-secondary);">—</span>'}</td>
             <td>${record.checkInTime || 'N/A'}</td>
             <td>${record.checkOutTime || 'N/A'}</td>
             <td style="font-size: 0.8rem; color: var(--text-secondary);">${createdAt.toLocaleString()}</td>

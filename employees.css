@@ -82,15 +82,32 @@
     border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+/* Other Staff Section Styling */
+.other-staff-section {
+    background: rgba(139, 92, 246, 0.08) !important;
+    border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
 
-/* Time Inputs Section */
-.time-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+.other-staff-section .slot-header h3 {
+    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.other-staff-section .slot-time {
+    background: rgba(139, 92, 246, 0.15);
+    color: #A78BFA;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.other-staff-card {
+    border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.other-staff-card:hover {
+    border-color: rgba(139, 92, 246, 0.4) !important;
+    box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.3) !important;
 }
 
 .time-input-group {
@@ -444,4 +461,245 @@
     .stats-table td {
         padding: 0.75rem 0.5rem;
     }
+}
+
+/* =========================================
+   EMPLOYEE MANAGEMENT FORM STYLES
+   ========================================= */
+
+/* Enhanced Form Card */
+.manage-header {
+    margin-bottom: 2rem;
+}
+
+.manage-header h2 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+/* Form inputs enhancement */
+#employeeForm .form-group input[type="text"],
+#employeeForm .form-group input[type="number"] {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 0.9rem 1.2rem;
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#employeeForm .form-group input:hover {
+    border-color: rgba(79, 70, 229, 0.4);
+    background: rgba(15, 23, 42, 0.7);
+}
+
+#employeeForm .form-group input:focus {
+    border-color: var(--primary);
+    background: rgba(15, 23, 42, 0.8);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15),
+        0 4px 20px rgba(79, 70, 229, 0.2);
+}
+
+#employeeForm .form-group input::placeholder {
+    color: rgba(148, 163, 184, 0.6);
+}
+
+/* Number input specific styling */
+#employeeForm input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+#employeeForm input[type="number"]::-webkit-outer-spin-button,
+#employeeForm input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Radio buttons enhanced styling */
+#employeeForm .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 1rem 1.25rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+    min-width: 180px;
+}
+
+#employeeForm .checkbox-label:hover {
+    background: rgba(79, 70, 229, 0.1);
+    border-color: rgba(79, 70, 229, 0.3);
+}
+
+#employeeForm .checkbox-label:has(input:checked) {
+    background: rgba(79, 70, 229, 0.15);
+    border-color: rgba(79, 70, 229, 0.5);
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+}
+
+#employeeForm .checkbox-label input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+#employeeForm .checkbox-label span {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* Other staff fields container */
+#otherStaffFields {
+    padding: 1.5rem;
+    background: rgba(139, 92, 246, 0.08);
+    border-radius: 16px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    margin-top: 1rem;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#otherStaffFields .form-group {
+    margin-bottom: 1rem;
+}
+
+#otherStaffFields .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Form actions enhanced */
+#employeeForm .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#employeeForm .form-actions .btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    padding: 0.9rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4);
+    transition: all 0.3s ease;
+}
+
+#employeeForm .form-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(79, 70, 229, 0.5);
+}
+
+#employeeForm .form-actions .btn-secondary {
+    padding: 0.9rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Employee list items enhanced */
+#employeesList .doctor-item {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+#employeesList .doctor-item:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateX(5px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+#employeesList .doctor-item-info h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.35rem;
+}
+
+#employeesList .doctor-item-info p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.2rem;
+}
+
+#employeesList .doctor-item-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+#employeesList .btn-icon {
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+/* Section headers in employee list (only top-level headers, not employee names) */
+#employeesList>div>h4 {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Form label enhancement */
+#employeeForm .form-group>label {
+    display: block;
+    margin-bottom: 0.6rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.3px;
+}
+
+#employeeForm .form-group>label .required {
+    color: #F43F5E;
+    font-weight: 700;
+}
+
+/* Form card title */
+#manageView .doctor-form-card h3,
+#manageView .doctors-list-card h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }

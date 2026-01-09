@@ -18,7 +18,8 @@ const employees = [
     { name: "Ms. Shreya Talekar", standardHours: 6 },
     { name: "Ms. Aditi Deshpande", standardHours: 6 },
     { name: "Mr. Vedant Bumrela", standardHours: 3 },
-    { name: "Dr. Rajendra Tippanwar", standardHours: 6 }
+    { name: "Dr. Rajendra Tippanwar", standardHours: 6 },
+    { name: "Ms. Anuradha Sapkal", standardHours: 7 }  // Other staff - for analytics
 ];
 
 // Helper: Calculate overtime hours
@@ -86,7 +87,8 @@ function formatAttendanceData(records) {
             timeSlot: record.timeSlot,
             slotNumber: record.slotNumber,
             checkInTime: record.checkInTime || '',
-            checkOutTime: record.checkOutTime || ''
+            checkOutTime: record.checkOutTime || '',
+            cabinNumber: record.cabinNumber || null
         };
     });
     return formatted;
@@ -132,6 +134,37 @@ app.get('/api/attendance/:date', async (req, res) => {
     }
 });
 
+// Get cabin availability for a specific date and slot
+app.get('/api/cabins/availability/:date/:slot', async (req, res) => {
+    try {
+        const { date, slot } = req.params;
+        const slotNumber = parseInt(slot);
+
+        // Find all occupied cabins for this date and slot
+        const occupiedRecords = await Attendance.find({
+            date,
+            slotNumber,
+            cabinNumber: { $ne: null }
+        });
+
+        const occupiedCabins = occupiedRecords.map(record => record.cabinNumber);
+
+        // All cabins 1-9
+        const allCabins = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        const availableCabins = allCabins.filter(cabin => !occupiedCabins.includes(cabin));
+
+        res.json({
+            occupied: occupiedCabins,
+            available: availableCabins,
+            total: 9
+        });
+    } catch (error) {
+        console.error('Error fetching cabin availability:', error);
+        res.status(500).json({ error: 'Failed to fetch cabin availability' });
+    }
+});
+
+
 // Save/Update attendance for a specific date
 app.post('/api/attendance/:date', async (req, res) => {
     try {
@@ -160,7 +193,8 @@ app.post('/api/attendance/:date', async (req, res) => {
                     timeSlot: 'N/A',
                     slotNumber,
                     checkInTime: '',
-                    checkOutTime: ''
+                    checkOutTime: '',
+                    cabinNumber: null
                 };
             } else {
                 return {
@@ -170,7 +204,8 @@ app.post('/api/attendance/:date', async (req, res) => {
                     timeSlot: data.timeSlot || 'N/A',
                     slotNumber: data.slotNumber || slotNumber,
                     checkInTime: data.checkInTime || '',
-                    checkOutTime: data.checkOutTime || ''
+                    checkOutTime: data.checkOutTime || '',
+                    cabinNumber: data.cabinNumber || null
                 };
             }
         });

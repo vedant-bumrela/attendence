@@ -37,11 +37,15 @@ function switchManageView(view) {
 function handleDoctorFormSubmit(e) {
     e.preventDefault();
 
+    const cabinValue = document.getElementById('cabinNumber').value;
     const formData = {
         name: document.getElementById('doctorName').value.trim(),
+        joiningDate: document.getElementById('joiningDate').value,
         days: Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb => parseInt(cb.value)),
         slots: Array.from(document.querySelectorAll('input[name="slots"]:checked')).map(cb => parseInt(cb.value)),
-        timeRange: document.getElementById('timeRange').value.trim()
+        timeRange: document.getElementById('timeRange').value.trim(),
+        cabinNumber: cabinValue ? parseInt(cabinValue) : null,
+        active: true  // New doctors are active by default
     };
 
     // Validation
@@ -62,6 +66,11 @@ function handleDoctorFormSubmit(e) {
 
     if (!formData.timeRange) {
         alert('Please enter time range');
+        return;
+    }
+
+    if (!formData.joiningDate) {
+        alert('Please select joining date');
         return;
     }
 
@@ -86,6 +95,7 @@ function resetDoctorForm() {
     document.getElementById('formTitle').textContent = 'Add New Doctor';
     document.getElementById('submitBtnText').textContent = 'Add Doctor';
     document.getElementById('cancelBtn').style.display = 'none';
+    document.getElementById('cabinNumber').value = '';
 
     // Reset days to default checked
     document.querySelectorAll('input[name="days"]').forEach(cb => cb.checked = true);
@@ -109,18 +119,34 @@ function renderDoctorsList() {
     container.innerHTML = doctors.map((doctor, index) => {
         const daysText = doctor.days.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d - 1]).join(', ');
         const slotsText = doctor.slots.map(s => `Slot ${s}`).join(', ');
+        const joiningDateFormatted = doctor.joiningDate ? new Date(doctor.joiningDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not set';
+        const isActive = doctor.active !== false; // Default to true if not set
+        const statusBadge = isActive
+            ? '<span class="status-badge active">Active</span>'
+            : '<span class="status-badge inactive">Inactive</span>';
+        const cabinText = doctor.cabinNumber ? `Cabin ${doctor.cabinNumber}` : 'No Cabin';
 
         return `
             <div class="doctor-item">
                 <div class="doctor-item-info">
-                    <h4>${doctor.name}</h4>
+                    <h4>${doctor.name} ${statusBadge}</h4>
+                    <p><strong>Joined:</strong> ${joiningDateFormatted}</p>
                     <p><strong>Days:</strong> ${daysText}</p>
                     <p><strong>Slots:</strong> ${slotsText}</p>
                     <p><strong>Time:</strong> ${doctor.timeRange}</p>
+                    <p><strong>Cabin:</strong> ${cabinText}</p>
                 </div>
                 <div class="doctor-item-actions">
                     <button class="btn-icon btn-edit" onclick="editDoctorForm(${index})">Edit</button>
-                    <button class="btn-icon btn-delete" onclick="deleteDoctor(${index})">Delete</button>
+                    <label class="switch-button" title="${isActive ? 'Click to deactivate' : 'Click to activate'}">
+                        <div class="switch-outer">
+                            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleDoctorStatus(${index})">
+                            <div class="button">
+                                <span class="button-toggle"></span>
+                                <span class="button-indicator"></span>
+                            </div>
+                        </div>
+                    </label>
                 </div>
             </div>
         `;
@@ -135,6 +161,7 @@ function editDoctorForm(index) {
 
     // Fill form
     document.getElementById('doctorName').value = doctor.name;
+    document.getElementById('joiningDate').value = doctor.joiningDate || '';
     document.getElementById('timeRange').value = doctor.timeRange;
     document.getElementById('editIndex').value = index;
 
@@ -147,6 +174,9 @@ function editDoctorForm(index) {
     document.querySelectorAll('input[name="slots"]').forEach(cb => {
         cb.checked = doctor.slots.includes(parseInt(cb.value));
     });
+
+    // Update cabin selection
+    document.getElementById('cabinNumber').value = doctor.cabinNumber || '';
 
     // Update form UI
     document.getElementById('formTitle').textContent = 'Edit Doctor';

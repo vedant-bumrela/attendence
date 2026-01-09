@@ -106,6 +106,7 @@
                             <th>Doctor Name</th>
                             <th>Status</th>
                             <th>Time Slot</th>
+                            <th>Cabin</th>
                             <th>Check-In</th>
                             <th>Check-Out</th>
                             <th>Recorded At</th>
@@ -136,6 +137,13 @@
                 <div class="form-group">
                     <label for="doctorName">Doctor Name *</label>
                     <input type="text" id="doctorName" placeholder="" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="joiningDate">Joining Date <span class="required">*</span></label>
+                    <div class="input-wrapper">
+                        <input type="date" id="joiningDate" required>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -193,6 +201,22 @@
                 <div class="form-group">
                     <label for="timeRange">Time Range </label>
                     <input type="text" id="timeRange" placeholder="e.g., 11:00 AM - 5:00 PM" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cabinNumber">Cabin Number</label>
+                    <select id="cabinNumber" class="form-select">
+                        <option value="">No Cabin Assigned</option>
+                        <option value="1">Cabin 1</option>
+                        <option value="2">Cabin 2</option>
+                        <option value="3">Cabin 3</option>
+                        <option value="4">Cabin 4</option>
+                        <option value="5">Cabin 5</option>
+                        <option value="6">Cabin 6</option>
+                        <option value="7">Cabin 7</option>
+                        <option value="8">Cabin 8</option>
+                        <option value="9">Cabin 9</option>
+                    </select>
                 </div>
 
                 <div class="form-actions">

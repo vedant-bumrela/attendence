@@ -1,10 +1,121 @@
 // ===== EMPLOYEE LIST =====
-const employees = [
+// Default employees (used when localStorage is empty)
+const DEFAULT_EMPLOYEES = [
     { name: "Ms. Shreya Talekar", standardHours: 6 },      // Full-time: 6 hours
     { name: "Ms. Aditi Deshpande", standardHours: 6 },     // Full-time: 6 hours
     { name: "Mr. Vedant Bumrela", standardHours: 3 },      // Part-time: 3 hours
     { name: "Dr. Rajendra Tippanwar", standardHours: 6 }   // Full-time: 6 hours
 ];
+
+// Default other staff
+const DEFAULT_OTHER_STAFF = [
+    { name: "Ms. Anuradha Sapkal", standardHours: 7, role: "Maid", workTime: "10:00 AM - 5:00 PM" }
+];
+
+// Dynamic employee lists (loaded from localStorage)
+let employees = [];
+let otherStaff = [];
+
+// Load employees from localStorage or use defaults
+function loadEmployeesFromStorage() {
+    const storedEmployees = localStorage.getItem('clinic_employees');
+    const storedOtherStaff = localStorage.getItem('clinic_other_staff');
+
+    if (storedEmployees) {
+        try {
+            const parsed = JSON.parse(storedEmployees);
+            // Filter out invalid entries (must have name and standardHours)
+            employees = parsed.filter(emp => emp.name && emp.name.trim() && emp.standardHours != null);
+        } catch (e) {
+            console.error('Error loading employees:', e);
+            employees = [...DEFAULT_EMPLOYEES];
+        }
+    } else {
+        employees = [...DEFAULT_EMPLOYEES];
+    }
+
+    if (storedOtherStaff) {
+        try {
+            const parsed = JSON.parse(storedOtherStaff);
+            // Filter out invalid entries
+            otherStaff = parsed.filter(emp => emp.name && emp.name.trim() && emp.standardHours != null);
+        } catch (e) {
+            console.error('Error loading other staff:', e);
+            otherStaff = [...DEFAULT_OTHER_STAFF];
+        }
+    } else {
+        otherStaff = [...DEFAULT_OTHER_STAFF];
+    }
+
+    // Save cleaned data back to storage
+    saveEmployeesToStorage();
+}
+
+// Save employees to localStorage
+function saveEmployeesToStorage() {
+    localStorage.setItem('clinic_employees', JSON.stringify(employees));
+    localStorage.setItem('clinic_other_staff', JSON.stringify(otherStaff));
+}
+
+// Add new employee
+function addEmployee(empData) {
+    if (empData.type === 'other') {
+        otherStaff.push({
+            name: empData.name,
+            standardHours: empData.standardHours,
+            role: empData.role || 'Staff',
+            workTime: empData.workTime || 'N/A'
+        });
+    } else {
+        employees.push({
+            name: empData.name,
+            standardHours: empData.standardHours
+        });
+    }
+    saveEmployeesToStorage();
+    renderEmployeesList();
+    renderDashboard();
+}
+
+// Edit existing employee
+function editEmployee(index, empData) {
+    if (empData.type === 'other') {
+        otherStaff[index] = {
+            name: empData.name,
+            standardHours: empData.standardHours,
+            role: empData.role || 'Staff',
+            workTime: empData.workTime || 'N/A'
+        };
+    } else {
+        employees[index] = {
+            name: empData.name,
+            standardHours: empData.standardHours
+        };
+    }
+    saveEmployeesToStorage();
+    renderEmployeesList();
+    renderDashboard();
+}
+
+// Delete employee
+function deleteEmployee(index, isOtherStaff = false) {
+    const list = isOtherStaff ? otherStaff : employees;
+    const empName = list[index].name;
+
+    if (confirm(`Are you sure you want to delete "${empName}"?\n\nThis action cannot be undone.`)) {
+        if (isOtherStaff) {
+            otherStaff.splice(index, 1);
+        } else {
+            employees.splice(index, 1);
+        }
+        saveEmployeesToStorage();
+        renderEmployeesList();
+        renderDashboard();
+    }
+}
+
+// Initialize employees on load
+loadEmployeesFromStorage();
 
 // Time slots configuration
 const timeSlots = [
@@ -125,6 +236,9 @@ function renderEmployeeSlots() {
             slotContainer.appendChild(employeeCard);
         });
     });
+
+    // Render other staff (once per day, not per slot)
+    renderOtherStaff(dateKey);
 }
 
 function createEmployeeCard(employee, dateKey, slot) {
@@ -204,6 +318,97 @@ function createEmployeeCard(employee, dateKey, slot) {
     return card;
 }
 
+// ===== OTHER STAFF RENDERING =====
+function renderOtherStaff(dateKey) {
+    const container = document.getElementById('otherStaffContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    otherStaff.forEach(staff => {
+        const staffCard = createOtherStaffCard(staff, dateKey);
+        container.appendChild(staffCard);
+    });
+}
+
+function createOtherStaffCard(staff, dateKey) {
+    const card = document.createElement('div');
+    card.className = 'employee-card other-staff-card';
+    card.dataset.employee = staff.name;
+
+    // Use a simple key without slot number for other staff
+    const uniqueKey = `${staff.name}_Daily`;
+    const attendanceInfo = getAttendanceInfo(dateKey, uniqueKey);
+    const currentStatus = attendanceInfo.status;
+    const checkInTime = attendanceInfo.checkInTime || '';
+    const checkOutTime = attendanceInfo.checkOutTime || '';
+
+    // Calculate overtime
+    const overtimeHours = calculateOvertimeHours(checkInTime, checkOutTime, staff.standardHours);
+    const overtimeDisplay = formatOvertimeDisplay(overtimeHours);
+
+    card.innerHTML = `
+        <div class="employee-info">
+            <div class="employee-name">${staff.name}</div>
+            <div class="employee-shift">${staff.role} • ${staff.workTime}</div>
+            ${overtimeDisplay ? `<div class="overtime-indicator">${overtimeDisplay}</div>` : ''}
+        </div>
+        <div class="attendance-controls">
+            <button class="attendance-btn ${currentStatus === 'present' ? 'present active' : 'present'}" 
+                    data-unique-key="${uniqueKey}"
+                    data-employee="${staff.name}" 
+                    data-status="present"
+                    data-is-other-staff="true">
+                Present
+            </button>
+            <button class="attendance-btn ${currentStatus === 'absent' ? 'absent active' : 'absent'}" 
+                    data-unique-key="${uniqueKey}"
+                    data-employee="${staff.name}" 
+                    data-status="absent"
+                    data-is-other-staff="true">
+                Absent
+            </button>
+        </div>
+        <div class="time-inputs">
+            <div class="time-input-group">
+                <label>Check-In</label>
+                <input type="time" 
+                       class="time-input check-in-input" 
+                       value="${checkInTime}"
+                       data-unique-key="${uniqueKey}"
+                       data-employee="${staff.name}"
+                       data-standard-hours="${staff.standardHours}"
+                       data-is-other-staff="true"
+                       ${currentStatus !== 'present' ? 'disabled' : ''}>
+            </div>
+            <div class="time-input-group">
+                <label>Check-Out</label>
+                <input type="time" 
+                       class="time-input check-out-input" 
+                       value="${checkOutTime}"
+                       data-unique-key="${uniqueKey}"
+                       data-employee="${staff.name}"
+                       data-standard-hours="${staff.standardHours}"
+                       data-is-other-staff="true"
+                       ${currentStatus !== 'present' ? 'disabled' : ''}>
+            </div>
+        </div>
+    `;
+
+    const buttons = card.querySelectorAll('.attendance-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', handleOtherStaffAttendanceClick);
+    });
+
+    const checkInInput = card.querySelector('.check-in-input');
+    const checkOutInput = card.querySelector('.check-out-input');
+
+    checkInInput.addEventListener('change', handleOtherStaffTimeChange);
+    checkOutInput.addEventListener('change', handleOtherStaffTimeChange);
+
+    return card;
+}
+
 // ===== ATTENDANCE HANDLING =====
 function handleAttendanceClick(event) {
     const button = event.currentTarget;
@@ -270,6 +475,59 @@ function getAttendanceInfo(dateKey, key) {
         };
     }
     return { status: null, checkInTime: '', checkOutTime: '' };
+}
+
+// ===== OTHER STAFF ATTENDANCE HANDLING =====
+function handleOtherStaffAttendanceClick(event) {
+    const button = event.currentTarget;
+    const employeeName = button.dataset.employee;
+    const uniqueKey = button.dataset.uniqueKey;
+    const status = button.dataset.status;
+    const dateKey = getDateKey(selectedDate);
+
+    if (!attendanceData[dateKey]) {
+        attendanceData[dateKey] = {};
+    }
+
+    const currentData = attendanceData[dateKey][uniqueKey];
+    const currentStatus = currentData?.status;
+
+    if (currentStatus === status) {
+        delete attendanceData[dateKey][uniqueKey];
+    } else {
+        attendanceData[dateKey][uniqueKey] = {
+            status: status,
+            timeSlot: 'Daily',
+            slotName: 'Other Staff',
+            slotNumber: 0, // 0 for non-slot staff
+            checkInTime: currentData?.checkInTime || '',
+            checkOutTime: currentData?.checkOutTime || ''
+        };
+    }
+
+    saveAttendanceData();
+    renderDashboard();
+}
+
+function handleOtherStaffTimeChange(event) {
+    const input = event.currentTarget;
+    const uniqueKey = input.dataset.uniqueKey;
+    const dateKey = getDateKey(selectedDate);
+    const isCheckIn = input.classList.contains('check-in-input');
+
+    if (!attendanceData[dateKey] || !attendanceData[dateKey][uniqueKey]) {
+        return;
+    }
+
+    if (isCheckIn) {
+        attendanceData[dateKey][uniqueKey].checkInTime = input.value;
+    } else {
+        attendanceData[dateKey][uniqueKey].checkOutTime = input.value;
+    }
+
+    saveAttendanceData();
+
+    renderDashboard();
 }
 
 // ===== DATA PERSISTENCE =====
@@ -577,7 +835,153 @@ function setupEventListeners() {
                 refreshDatabaseView();
             } else if (tab.dataset.tab === 'reports') {
                 initializeReportsView();
+            } else if (tab.dataset.tab === 'manage') {
+                renderEmployeesList();
+                setupEmployeeForm();
             }
         });
     });
 }
+
+// ===== EMPLOYEE MANAGEMENT UI =====
+function renderEmployeesList() {
+    const container = document.getElementById('employeesList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Render regular employees
+    if (employees.length > 0) {
+        const regularHeader = document.createElement('div');
+        regularHeader.innerHTML = '<h4 style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Regular Employees (Shift-based)</h4>';
+        container.appendChild(regularHeader);
+
+        employees.forEach((emp, index) => {
+            const item = createEmployeeItem(emp, index, false);
+            container.appendChild(item);
+        });
+    }
+
+    // Render other staff
+    if (otherStaff.length > 0) {
+        const otherHeader = document.createElement('div');
+        otherHeader.innerHTML = '<h4 style="color: var(--text-secondary); margin: 1.5rem 0 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Other Staff (Daily)</h4>';
+        container.appendChild(otherHeader);
+
+        otherStaff.forEach((emp, index) => {
+            const item = createEmployeeItem(emp, index, true);
+            container.appendChild(item);
+        });
+    }
+
+    if (employees.length === 0 && otherStaff.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No employees added yet. Use the form above to add employees.</p>';
+    }
+}
+
+function createEmployeeItem(emp, index, isOther) {
+    const item = document.createElement('div');
+    item.className = 'doctor-item';
+
+    const roleInfo = isOther ? `<p>${emp.role || 'Staff'} • ${emp.workTime || 'N/A'}</p>` : '';
+
+    item.innerHTML = `
+        <div class="doctor-item-info">
+            <h4>${emp.name}</h4>
+            <p>Standard Hours: ${emp.standardHours} hrs/day</p>
+            ${roleInfo}
+        </div>
+        <div class="doctor-item-actions">
+            <button class="btn-icon btn-edit" onclick="populateEditForm(${index}, ${isOther})">Edit</button>
+            <button class="btn-icon btn-delete" onclick="deleteEmployee(${index}, ${isOther})">Delete</button>
+        </div>
+    `;
+
+    return item;
+}
+
+function setupEmployeeForm() {
+    const form = document.getElementById('employeeForm');
+    const cancelBtn = document.getElementById('empCancelBtn');
+
+    // Employee type toggle
+    const empTypeRadios = document.querySelectorAll('input[name="empType"]');
+    empTypeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const otherFields = document.getElementById('otherStaffFields');
+            otherFields.style.display = e.target.value === 'other' ? 'block' : 'none';
+        });
+    });
+
+    // Form submit handler
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const editIndex = document.getElementById('empEditIndex').value;
+        const empType = document.querySelector('input[name="empType"]:checked').value;
+
+        const empData = {
+            name: document.getElementById('employeeName').value.trim(),
+            standardHours: parseInt(document.getElementById('standardHours').value),
+            type: empType,
+            role: document.getElementById('empRole').value.trim(),
+            workTime: document.getElementById('empWorkTime').value.trim()
+        };
+
+        if (editIndex !== '') {
+            editEmployee(parseInt(editIndex), empData);
+        } else {
+            addEmployee(empData);
+        }
+
+        resetEmployeeForm();
+    });
+
+    // Cancel button handler
+    cancelBtn.addEventListener('click', resetEmployeeForm);
+}
+
+function populateEditForm(index, isOther) {
+    const emp = isOther ? otherStaff[index] : employees[index];
+
+    document.getElementById('empEditIndex').value = index;
+    document.getElementById('employeeName').value = emp.name;
+    document.getElementById('standardHours').value = emp.standardHours;
+
+    // Set employee type
+    const typeRadio = document.querySelector(`input[name="empType"][value="${isOther ? 'other' : 'regular'}"]`);
+    typeRadio.checked = true;
+
+    // Show/hide other staff fields
+    const otherFields = document.getElementById('otherStaffFields');
+    if (isOther) {
+        otherFields.style.display = 'block';
+        document.getElementById('empRole').value = emp.role || '';
+        document.getElementById('empWorkTime').value = emp.workTime || '';
+    } else {
+        otherFields.style.display = 'none';
+    }
+
+    // Store the original type for editing
+    document.getElementById('empEditIndex').dataset.isOther = isOther;
+
+    // Update form UI
+    document.getElementById('empFormTitle').textContent = 'Edit Employee';
+    document.getElementById('empSubmitBtnText').textContent = 'Update Employee';
+    document.getElementById('empCancelBtn').style.display = 'inline-block';
+
+    // Scroll to form
+    document.querySelector('.doctor-form-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetEmployeeForm() {
+    document.getElementById('employeeForm').reset();
+    document.getElementById('empEditIndex').value = '';
+    document.getElementById('empEditIndex').dataset.isOther = '';
+    document.getElementById('empFormTitle').textContent = 'Add New Employee';
+    document.getElementById('empSubmitBtnText').textContent = 'Add Employee';
+    document.getElementById('empCancelBtn').style.display = 'none';
+    document.getElementById('otherStaffFields').style.display = 'none';
+    document.querySelector('input[name="empType"][value="regular"]').checked = true;
+}
+
