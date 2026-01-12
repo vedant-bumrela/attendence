@@ -69,7 +69,34 @@
     color: var(--text-secondary);
 }
 
-/* Overtime Indicator */
+/* Hours Indicator (Overtime/Undertime) */
+.hours-indicator {
+    margin-top: 0.5rem;
+}
+
+.overtime-badge {
+    font-size: 0.75rem;
+    color: #F59E0B;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    background: rgba(245, 158, 11, 0.15);
+    border-radius: 6px;
+    display: inline-block;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.undertime-badge {
+    font-size: 0.75rem;
+    color: #F43F5E;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    background: rgba(244, 63, 94, 0.15);
+    border-radius: 6px;
+    display: inline-block;
+    border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+/* Keep old overtime-indicator for backward compatibility */
 .overtime-indicator {
     font-size: 0.75rem;
     color: #F59E0B;

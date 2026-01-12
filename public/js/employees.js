@@ -168,9 +168,9 @@ function isSunday(date) {
     return date.getDay() === 0;
 }
 
-// ===== OVERTIME CALCULATION =====
-function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
-    if (!checkInTime || !checkOutTime) return 0;
+// ===== OVERTIME/UNDERTIME CALCULATION =====
+function calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours) {
+    if (!checkInTime || !checkOutTime) return { overtime: 0, undertime: 0, hoursWorked: 0 };
 
     // Parse times (format: "HH:MM")
     const [inHour, inMin] = checkInTime.split(':').map(Number);
@@ -180,12 +180,34 @@ function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
     const totalMinutes = (outHour * 60 + outMin) - (inHour * 60 + inMin);
     const hoursWorked = totalMinutes / 60;
 
-    // Calculate overtime (hours worked - standard hours)
-    const overtime = Math.max(0, hoursWorked - standardHours);
+    // Calculate overtime or undertime
+    const difference = hoursWorked - standardHours;
 
-    return parseFloat(overtime.toFixed(2));
+    return {
+        overtime: difference > 0 ? parseFloat(difference.toFixed(2)) : 0,
+        undertime: difference < 0 ? parseFloat(Math.abs(difference).toFixed(2)) : 0,
+        hoursWorked: parseFloat(hoursWorked.toFixed(2))
+    };
 }
 
+// Keep old function for backward compatibility
+function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
+    const result = calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours);
+    return result.overtime;
+}
+
+function formatHoursDifferenceDisplay(checkInTime, checkOutTime, standardHours) {
+    const result = calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours);
+
+    if (result.overtime > 0) {
+        return `<span class="overtime-badge">+${result.overtime} hrs OT</span>`;
+    } else if (result.undertime > 0) {
+        return `<span class="undertime-badge">-${result.undertime} hrs</span>`;
+    }
+    return '';
+}
+
+// Keep old function for backward compatibility
 function formatOvertimeDisplay(overtimeHours) {
     if (overtimeHours <= 0) return '';
     return `+${overtimeHours} hrs OT`;
@@ -252,15 +274,14 @@ function createEmployeeCard(employee, dateKey, slot) {
     const checkInTime = attendanceInfo.checkInTime || '';
     const checkOutTime = attendanceInfo.checkOutTime || '';
 
-    // Calculate overtime
-    const overtimeHours = calculateOvertimeHours(checkInTime, checkOutTime, employee.standardHours);
-    const overtimeDisplay = formatOvertimeDisplay(overtimeHours);
+    // Calculate overtime/undertime
+    const hoursDifferenceDisplay = formatHoursDifferenceDisplay(checkInTime, checkOutTime, employee.standardHours);
 
     card.innerHTML = `
         <div class="employee-info">
             <div class="employee-name">${employee.name}</div>
             <div class="employee-shift">${slot.name}</div>
-            ${overtimeDisplay ? `<div class="overtime-indicator">${overtimeDisplay}</div>` : ''}
+            ${hoursDifferenceDisplay ? `<div class="hours-indicator">${hoursDifferenceDisplay}</div>` : ''}
         </div>
         <div class="attendance-controls">
             <button class="attendance-btn ${currentStatus === 'present' ? 'present active' : 'present'}" 
@@ -343,15 +364,14 @@ function createOtherStaffCard(staff, dateKey) {
     const checkInTime = attendanceInfo.checkInTime || '';
     const checkOutTime = attendanceInfo.checkOutTime || '';
 
-    // Calculate overtime
-    const overtimeHours = calculateOvertimeHours(checkInTime, checkOutTime, staff.standardHours);
-    const overtimeDisplay = formatOvertimeDisplay(overtimeHours);
+    // Calculate overtime/undertime
+    const hoursDifferenceDisplay = formatHoursDifferenceDisplay(checkInTime, checkOutTime, staff.standardHours);
 
     card.innerHTML = `
         <div class="employee-info">
             <div class="employee-name">${staff.name}</div>
             <div class="employee-shift">${staff.role} • ${staff.workTime}</div>
-            ${overtimeDisplay ? `<div class="overtime-indicator">${overtimeDisplay}</div>` : ''}
+            ${hoursDifferenceDisplay ? `<div class="hours-indicator">${hoursDifferenceDisplay}</div>` : ''}
         </div>
         <div class="attendance-controls">
             <button class="attendance-btn ${currentStatus === 'present' ? 'present active' : 'present'}" 
@@ -571,26 +591,8 @@ async function saveAttendanceData() {
 
 // ===== EXPORT FUNCTIONALITY =====
 async function exportToCSV() {
-    try {
-        const response = await fetch(`${API_URL}/export/csv`);
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `employee-attendance-${formatDateForInput(new Date())}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        } else {
-            alert('Failed to export data. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error exporting data:', error);
-        alert('Error exporting data. Make sure the server is running.');
-    }
+    // Direct download - browser will use Content-Disposition header for filename
+    window.location.href = `${API_URL}/export/csv`;
 }
 
 // ===== DATABASE VIEW =====
@@ -792,16 +794,24 @@ function downloadReportCSV() {
         row.map(cell => `"${cell}"`).join(',')
     ).join('\n');
 
-    // Create download link
+    // Create download with proper filename
+    const filename = `attendance-report-${dateRange.start}-to-${dateRange.end}.csv`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `attendance-report-${dateRange.start}-to-${dateRange.end}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+
+    // Use msSaveBlob for IE/Edge compatibility, otherwise use download link
+    if (navigator.msSaveBlob) {
+        navigator.msSaveBlob(blob, filename);
+    } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
 }
 
 // ===== EVENT LISTENERS =====

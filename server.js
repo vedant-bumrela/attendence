@@ -9,9 +9,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    exposedHeaders: ['Content-Disposition']
+}));
 app.use(express.json());
-app.use(express.static(__dirname)); // Serve static files (HTML, CSS, JS)
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public'))); // Serve static files from public folder
 
 // Employee list with standard working hours
 const employees = [
@@ -433,7 +436,7 @@ app.get('/api/employees/export/csv', async (req, res) => {
         ).join('\n');
 
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename=\"employee-attendance-export-${new Date().toISOString().split('T')[0]}.csv\"`);
+        res.setHeader('Content-Disposition', 'attachment; filename="employee-attendance-export-' + new Date().toISOString().split('T')[0] + '.csv"');
         res.send(csvContent);
     } catch (error) {
         console.error('Error exporting employee CSV:', error);

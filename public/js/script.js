@@ -542,27 +542,8 @@ function closeHistoryModal() {
 
 // ===== EXPORT FUNCTIONALITY =====
 async function exportToCSV() {
-    try {
-        const response = await fetch(`${API_URL}/export/csv`);
-
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `doctor-attendance-${formatDateForInput(new Date())}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        } else {
-            console.error('Failed to export data');
-            alert('Failed to export data. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error exporting data:', error);
-        alert('Error exporting data. Make sure the server is running.');
-    }
+    // Direct download - browser will use Content-Disposition header for filename
+    window.location.href = `${API_URL}/export/csv`;
 }
 
 // ===== EVENT LISTENERS =====
@@ -596,9 +577,11 @@ function setupEventListeners() {
             view.style.display = 'block';
             setTimeout(() => view.classList.add('active'), 10);
 
-            // Load data if switching to database view
+            // Load data based on tab
             if (tab.dataset.tab === 'database') {
                 refreshDatabaseView();
+            } else if (tab.dataset.tab === 'cabins') {
+                renderCabinOverview();
             }
         });
     });
@@ -660,4 +643,138 @@ function getInitials(name) {
         .join('')
         .substring(0, 2)
         .toUpperCase();
+}
+
+// ===== CABIN OVERVIEW =====
+function renderCabinOverview() {
+    renderCabinTable();
+}
+
+function renderCabinSummaryCards() {
+    const grid = document.getElementById('cabinSummaryGrid');
+    if (!grid) return;
+
+    // Count cabins assigned
+    const cabinCounts = {};
+    const activeDoctors = doctors.filter(d => d.active !== false);
+
+    activeDoctors.forEach(doctor => {
+        const cabin = doctor.cabinNumber;
+        if (cabin) {
+            cabinCounts[cabin] = (cabinCounts[cabin] || 0) + 1;
+        }
+    });
+
+    // Calculate statistics
+    const totalDoctors = activeDoctors.length;
+    const doctorsWithCabins = activeDoctors.filter(d => d.cabinNumber).length;
+    const doctorsWithoutCabins = totalDoctors - doctorsWithCabins;
+    const uniqueCabinsUsed = Object.keys(cabinCounts).length;
+
+    grid.innerHTML = `
+        <div class="cabin-summary-card">
+            <div class="summary-icon">👨‍⚕️</div>
+            <div class="summary-value">${totalDoctors}</div>
+            <div class="summary-label">Active Doctors</div>
+        </div>
+        <div class="cabin-summary-card">
+            <div class="summary-icon">🏠</div>
+            <div class="summary-value">${uniqueCabinsUsed}</div>
+            <div class="summary-label">Cabins in Use</div>
+        </div>
+        <div class="cabin-summary-card assigned">
+            <div class="summary-icon">✓</div>
+            <div class="summary-value">${doctorsWithCabins}</div>
+            <div class="summary-label">Doctors with Cabin</div>
+        </div>
+        <div class="cabin-summary-card warning">
+            <div class="summary-icon">⚠️</div>
+            <div class="summary-value">${doctorsWithoutCabins}</div>
+            <div class="summary-label">Need Cabin Assignment</div>
+        </div>
+    `;
+}
+
+function renderCabinTable() {
+    const tbody = document.getElementById('cabinTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const slotNames = {
+        1: 'Morning (8-11 AM)',
+        2: 'Mid-Day (11 AM-2 PM)',
+        3: 'Afternoon (2-5 PM)',
+        4: 'Evening (5-8 PM)'
+    };
+
+    // Sort doctors: active first, then by name
+    const sortedDoctors = [...doctors].sort((a, b) => {
+        const aActive = a.active !== false;
+        const bActive = b.active !== false;
+        if (aActive !== bActive) return bActive - aActive;
+        return a.name.localeCompare(b.name);
+    });
+
+    if (sortedDoctors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No doctors in the system</td></tr>';
+        return;
+    }
+
+    sortedDoctors.forEach(doctor => {
+        const row = document.createElement('tr');
+        const isActive = doctor.active !== false;
+
+        // Format working days
+        const workingDays = doctor.days
+            .map(d => dayNames[d])
+            .join(', ');
+
+        // Format slots
+        const slots = doctor.slots
+            .map(s => `S${s}`)
+            .join(', ');
+
+        // Cabin display
+        const cabinDisplay = doctor.cabinNumber
+            ? `<span class="cabin-badge-table">${doctor.cabinNumber}</span>`
+            : '<span class="no-cabin">Not Assigned</span>';
+
+        // Status badge
+        const statusBadge = isActive
+            ? '<span class="status-badge-small active">Active</span>'
+            : '<span class="status-badge-small inactive">Inactive</span>';
+
+        row.className = isActive ? '' : 'inactive-row';
+        row.innerHTML = `
+            <td>${doctor.name}</td>
+            <td>${workingDays}</td>
+            <td>${slots}</td>
+            <td>${doctor.timeRange}</td>
+            <td>${cabinDisplay}</td>
+            <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Filter cabin table by search input
+function filterCabinTable() {
+    const searchInput = document.getElementById('cabinSearchInput');
+    const filter = searchInput.value.toLowerCase();
+    const tbody = document.getElementById('cabinTableBody');
+    const rows = tbody.getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        const doctorName = rows[i].getElementsByTagName('td')[0];
+        if (doctorName) {
+            const textValue = doctorName.textContent || doctorName.innerText;
+            if (textValue.toLowerCase().indexOf(filter) > -1) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
 }

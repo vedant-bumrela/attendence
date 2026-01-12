@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor Attendance Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
@@ -20,6 +20,7 @@
             <!-- Navigation Tabs -->
             <div class="nav-tabs">
                 <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+                <button class="nav-tab" data-tab="cabins">Cabin Overview</button>
                 <button class="nav-tab" data-tab="database">Database Records</button>
                 <button class="nav-tab" data-tab="manage">Manage Doctors</button>
             </div>
@@ -32,7 +33,7 @@
                     <input type="date" id="dateInput">
                 </div>
                 <button class="btn btn-primary" id="exportBtn">
-                    Download .csv
+                    Detailed report
                 </button>
             </div>
         </div>
@@ -116,6 +117,46 @@
                         <!-- Populated by JS -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- VIEW: Cabin Overview -->
+        <div id="cabinsView" class="view-section" style="display: none;">
+            <div class="cabin-overview-header">
+                <h2>Cabin Overview</h2>
+            </div>
+
+            <!-- Cabin Summary Cards -->
+            <div class="cabin-summary-grid" id="cabinSummaryGrid">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- All Doctors Table -->
+            <div class="cabin-table-container">
+                <div class="cabin-table-header">
+                    <h3>All Doctors Schedule</h3>
+                    <div class="search-box">
+                        <input type="text" id="cabinSearchInput" placeholder="Search doctor..."
+                            oninput="filterCabinTable()">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="history-table cabin-table">
+                        <thead>
+                            <tr>
+                                <th>Doctor Name</th>
+                                <th>Working Days</th>
+                                <th>Slots</th>
+                                <th>Timing</th>
+                                <th>Cabin</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cabinTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
@@ -260,8 +301,8 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
-    <script src="doctor-management.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/doctor-management.js"></script>
 </body>
 
 </html>
