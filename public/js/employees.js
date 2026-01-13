@@ -994,4 +994,3 @@ function resetEmployeeForm() {
     document.getElementById('otherStaffFields').style.display = 'none';
     document.querySelector('input[name="empType"][value="regular"]').checked = true;
 }
-

@@ -126,9 +126,54 @@
                 <h2>Cabin Overview</h2>
             </div>
 
-            <!-- Cabin Summary Cards -->
-            <div class="cabin-summary-grid" id="cabinSummaryGrid">
-                <!-- Populated by JS -->
+            <!-- Cabin Availability Checker -->
+            <div class="availability-checker">
+                <div class="checker-row">
+                    <div class="filter-group">
+                        <label>Day</label>
+                        <select id="dayFilter" onchange="checkCabinAvailability()">
+                            <option value="">Select Day</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Slot</label>
+                        <select id="slotFilter" onchange="checkCabinAvailability()">
+                            <option value="">All Slots</option>
+                            <option value="1">S1 (8:00 AM - 11:00 AM)</option>
+                            <option value="2">S2 (11:00 AM - 2:00 PM)</option>
+                            <option value="3">S3 (2:00 PM - 5:00 PM)</option>
+                            <option value="4">S4 (5:00 PM - 8:00 PM)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Cabin</label>
+                        <select id="cabinFilter" onchange="checkCabinAvailability()">
+                            <option value="">All Cabins</option>
+                            <option value="1">Cabin 1</option>
+                            <option value="2">Cabin 2</option>
+                            <option value="3">Cabin 3</option>
+                            <option value="4">Cabin 4</option>
+                            <option value="5">Cabin 5</option>
+                            <option value="6">Cabin 6</option>
+                            <option value="7">Cabin 7</option>
+                            <option value="8">Cabin 8</option>
+                            <option value="9">Cabin 9</option>
+                            <option value="10">Cabin 10</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+                </div>
+
+                <!-- Results Display -->
+                <div id="availabilityResults" class="availability-results">
+                    <p class="hint-text">Select a day to see cabin availability</p>
+                </div>
             </div>
 
             <!-- All Doctors Table -->

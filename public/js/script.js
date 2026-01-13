@@ -778,3 +778,141 @@ function filterCabinTable() {
         }
     }
 }
+
+// ===== CABIN AVAILABILITY CHECKER =====
+const slotTimes = {
+    1: '8:00 AM - 11:00 AM',
+    2: '11:00 AM - 2:00 PM',
+    3: '2:00 PM - 5:00 PM',
+    4: '5:00 PM - 8:00 PM'
+};
+
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function checkCabinAvailability() {
+    const dayFilter = document.getElementById('dayFilter').value;
+    const slotFilter = document.getElementById('slotFilter').value;
+    const cabinFilter = document.getElementById('cabinFilter').value;
+    const resultsDiv = document.getElementById('availabilityResults');
+
+    if (!dayFilter) {
+        resultsDiv.innerHTML = '<p class="hint-text">Select a day to see cabin availability</p>';
+        return;
+    }
+
+    const day = parseInt(dayFilter);
+    const slot = slotFilter ? parseInt(slotFilter) : null;
+    const cabin = cabinFilter ? parseInt(cabinFilter) : null;
+
+    // Find all doctors working on this day
+    const activeDoctors = doctors.filter(d => d.active !== false);
+
+    // Build cabin occupancy data
+    const cabinOccupancy = {}; // cabinNumber -> { slots: [], doctors: [] }
+
+    activeDoctors.forEach(doctor => {
+        if (!doctor.days.includes(day)) return;
+        if (!doctor.cabinNumber) return;
+
+        // Get slots for this day (handle special schedules)
+        let doctorSlots = doctor.slots;
+        if (doctor.specialSchedule && doctor.specialSchedule[day]) {
+            doctorSlots = doctor.specialSchedule[day];
+        }
+
+        // Filter by selected slot
+        if (slot && !doctorSlots.includes(slot)) return;
+
+        const cabinNum = doctor.cabinNumber;
+        if (!cabinOccupancy[cabinNum]) {
+            cabinOccupancy[cabinNum] = { slots: [], doctors: [] };
+        }
+
+        doctorSlots.forEach(s => {
+            if (!slot || s === slot) {
+                if (!cabinOccupancy[cabinNum].slots.includes(s)) {
+                    cabinOccupancy[cabinNum].slots.push(s);
+                }
+                cabinOccupancy[cabinNum].doctors.push({
+                    name: doctor.name,
+                    slot: s,
+                    time: doctor.timeRange
+                });
+            }
+        });
+    });
+
+    // Filter by selected cabin
+    if (cabin) {
+        const filtered = {};
+        if (cabinOccupancy[cabin]) {
+            filtered[cabin] = cabinOccupancy[cabin];
+        }
+        renderAvailabilityResults(filtered, day, slot, cabin);
+    } else {
+        renderAvailabilityResults(cabinOccupancy, day, slot, cabin);
+    }
+}
+
+function renderAvailabilityResults(cabinOccupancy, day, selectedSlot, selectedCabin) {
+    const resultsDiv = document.getElementById('availabilityResults');
+    const dayName = dayNames[day];
+
+    let html = `<div class="results-header">
+        <h4>📅 ${dayName}${selectedSlot ? ` - Slot ${selectedSlot} (${slotTimes[selectedSlot]})` : ''}</h4>
+    </div>`;
+
+    // Show cabin status cards
+    html += '<div class="cabin-status-grid">';
+
+    const cabinsToShow = selectedCabin ? [selectedCabin] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    cabinsToShow.forEach(cabinNum => {
+        const occupancy = cabinOccupancy[cabinNum];
+        const isBooked = occupancy && occupancy.doctors.length > 0;
+
+        if (isBooked) {
+            // Show booked cabin with doctor info
+            html += `<div class="cabin-status-card booked">
+                <div class="cabin-number">Cabin ${cabinNum}</div>
+                <div class="cabin-status">🔴 Booked</div>
+                <div class="cabin-doctors">`;
+
+            occupancy.doctors.forEach(doc => {
+                html += `<div class="doctor-entry">
+                    <span class="doc-name">${doc.name}</span>
+                    <span class="doc-slot">S${doc.slot}</span>
+                </div>`;
+            });
+
+            html += `</div></div>`;
+        } else {
+            // Show available cabin
+            html += `<div class="cabin-status-card available">
+                <div class="cabin-number">Cabin ${cabinNum}</div>
+                <div class="cabin-status">🟢 Available</div>
+                ${selectedSlot ? `<div class="cabin-time">${slotTimes[selectedSlot]}</div>` : '<div class="cabin-time">All Slots Free</div>'}
+            </div>`;
+        }
+    });
+
+    html += '</div>';
+
+    // Summary
+    const bookedCount = Object.keys(cabinOccupancy).length;
+    const availableCount = cabinsToShow.length - bookedCount;
+
+    html += `<div class="availability-summary">
+        <span class="summary-booked">🔴 ${bookedCount} Booked</span>
+        <span class="summary-available">🟢 ${availableCount} Available</span>
+    </div>`;
+
+    resultsDiv.innerHTML = html;
+}
+
+function clearFilters() {
+    document.getElementById('dayFilter').value = '';
+    document.getElementById('slotFilter').value = '';
+    document.getElementById('cabinFilter').value = '';
+    document.getElementById('availabilityResults').innerHTML = '<p class="hint-text">Select a day to see cabin availability</p>';
+}
