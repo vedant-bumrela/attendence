@@ -46,44 +46,28 @@
     </div>
 
     <script>
-        // Dynamically load counts from localStorage
-        document.addEventListener('DOMContentLoaded', () => {
-            // Count Doctors
-            const storedDoctors = localStorage.getItem('clinic_doctors');
-            let doctorCount = 0;
-            if (storedDoctors) {
-                try {
-                    const doctors = JSON.parse(storedDoctors);
-                    // Count only active doctors
-                    doctorCount = doctors.filter(d => d.isActive !== false).length;
-                } catch (e) {
-                    doctorCount = 0;
+        // Fetch counts from API
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('http://localhost:3000/api/counts');
+                if (response.ok) {
+                    const counts = await response.json();
+
+                    // Display doctor count
+                    const doctorCount = counts.doctors || 0;
+                    document.getElementById('doctorCount').textContent = `${doctorCount} Doctor${doctorCount !== 1 ? 's' : ''}`;
+
+                    // Display total staff count (employees + other staff)
+                    const employeeCount = (counts.employees || 0) + (counts.otherStaff || 0);
+                    document.getElementById('employeeCount').textContent = `${employeeCount} Employee${employeeCount !== 1 ? 's' : ''}`;
+                } else {
+                    throw new Error('Failed to fetch counts');
                 }
+            } catch (error) {
+                console.error('Error loading counts:', error);
+                document.getElementById('doctorCount').textContent = 'Unavailable';
+                document.getElementById('employeeCount').textContent = 'Unavailable';
             }
-            document.getElementById('doctorCount').textContent = `${doctorCount} Doctor${doctorCount !== 1 ? 's' : ''}`;
-
-            // Count Employees
-            const storedEmployees = localStorage.getItem('clinic_employees');
-            const storedOtherStaff = localStorage.getItem('clinic_other_staff');
-            let employeeCount = 0;
-
-            if (storedEmployees) {
-                try {
-                    employeeCount += JSON.parse(storedEmployees).length;
-                } catch (e) { }
-            }
-            if (storedOtherStaff) {
-                try {
-                    employeeCount += JSON.parse(storedOtherStaff).length;
-                } catch (e) { }
-            }
-
-            // Default fallback if no data in localStorage
-            if (employeeCount === 0 && !storedEmployees) {
-                employeeCount = 5; // Default employees
-            }
-
-            document.getElementById('employeeCount').textContent = `${employeeCount} Employee${employeeCount !== 1 ? 's' : ''}`;
         });
     </script>
 </body>

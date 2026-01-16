@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-// Define Attendance Schema
-const attendanceSchema = new mongoose.Schema({
+// Define Doctor Attendance Schema
+const doctorAttendanceSchema = new mongoose.Schema({
     date: {
         type: String,
         required: true,
@@ -42,9 +42,9 @@ const attendanceSchema = new mongoose.Schema({
 });
 
 // Compound index for efficient querying and enforcing uniqueness per slot
-attendanceSchema.index({ date: 1, doctorName: 1, slotNumber: 1 }, { unique: true });
+doctorAttendanceSchema.index({ date: 1, doctorName: 1, slotNumber: 1 }, { unique: true });
 
-// Create model
-const Attendance = mongoose.model('Attendance', attendanceSchema);
+// Create model - collection name will be 'doctorattendances'
+const DoctorAttendance = mongoose.model('DoctorAttendance', doctorAttendanceSchema);
 
-module.exports = Attendance;
+module.exports = DoctorAttendance;

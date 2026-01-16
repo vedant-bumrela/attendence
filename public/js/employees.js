@@ -1,121 +1,126 @@
+// ===== API CONFIGURATION =====
+const STAFF_API_URL = 'http://localhost:3000/api';
+
 // ===== EMPLOYEE LIST =====
-// Default employees (used when localStorage is empty)
-const DEFAULT_EMPLOYEES = [
-    { name: "Ms. Shreya Talekar", standardHours: 6 },      // Full-time: 6 hours
-    { name: "Ms. Aditi Deshpande", standardHours: 6 },     // Full-time: 6 hours
-    { name: "Mr. Vedant Bumrela", standardHours: 3 },      // Part-time: 3 hours
-    { name: "Dr. Rajendra Tippanwar", standardHours: 6 }   // Full-time: 6 hours
-];
+// Employees are now loaded from the database API instead of localStorage
 
-// Default other staff
-const DEFAULT_OTHER_STAFF = [
-    { name: "Ms. Anuradha Sapkal", standardHours: 7, role: "Maid", workTime: "10:00 AM - 5:00 PM" }
-];
-
-// Dynamic employee lists (loaded from localStorage)
+// Dynamic employee lists (loaded from API)
 let employees = [];
 let otherStaff = [];
 
-// Load employees from localStorage or use defaults
-function loadEmployeesFromStorage() {
-    const storedEmployees = localStorage.getItem('clinic_employees');
-    const storedOtherStaff = localStorage.getItem('clinic_other_staff');
-
-    if (storedEmployees) {
-        try {
-            const parsed = JSON.parse(storedEmployees);
-            // Filter out invalid entries (must have name and standardHours)
-            employees = parsed.filter(emp => emp.name && emp.name.trim() && emp.standardHours != null);
-        } catch (e) {
-            console.error('Error loading employees:', e);
-            employees = [...DEFAULT_EMPLOYEES];
-        }
-    } else {
-        employees = [...DEFAULT_EMPLOYEES];
-    }
-
-    if (storedOtherStaff) {
-        try {
-            const parsed = JSON.parse(storedOtherStaff);
-            // Filter out invalid entries
-            otherStaff = parsed.filter(emp => emp.name && emp.name.trim() && emp.standardHours != null);
-        } catch (e) {
-            console.error('Error loading other staff:', e);
-            otherStaff = [...DEFAULT_OTHER_STAFF];
-        }
-    } else {
-        otherStaff = [...DEFAULT_OTHER_STAFF];
-    }
-
-    // Save cleaned data back to storage
-    saveEmployeesToStorage();
-}
-
-// Save employees to localStorage
-function saveEmployeesToStorage() {
-    localStorage.setItem('clinic_employees', JSON.stringify(employees));
-    localStorage.setItem('clinic_other_staff', JSON.stringify(otherStaff));
-}
-
-// Add new employee
-function addEmployee(empData) {
-    if (empData.type === 'other') {
-        otherStaff.push({
-            name: empData.name,
-            standardHours: empData.standardHours,
-            role: empData.role || 'Staff',
-            workTime: empData.workTime || 'N/A'
-        });
-    } else {
-        employees.push({
-            name: empData.name,
-            standardHours: empData.standardHours
-        });
-    }
-    saveEmployeesToStorage();
-    renderEmployeesList();
-    renderDashboard();
-}
-
-// Edit existing employee
-function editEmployee(index, empData) {
-    if (empData.type === 'other') {
-        otherStaff[index] = {
-            name: empData.name,
-            standardHours: empData.standardHours,
-            role: empData.role || 'Staff',
-            workTime: empData.workTime || 'N/A'
-        };
-    } else {
-        employees[index] = {
-            name: empData.name,
-            standardHours: empData.standardHours
-        };
-    }
-    saveEmployeesToStorage();
-    renderEmployeesList();
-    renderDashboard();
-}
-
-// Delete employee
-function deleteEmployee(index, isOtherStaff = false) {
-    const list = isOtherStaff ? otherStaff : employees;
-    const empName = list[index].name;
-
-    if (confirm(`Are you sure you want to delete "${empName}"?\n\nThis action cannot be undone.`)) {
-        if (isOtherStaff) {
-            otherStaff.splice(index, 1);
+// Load employees from API
+async function loadEmployeesFromAPI() {
+    try {
+        const response = await fetch(`${STAFF_API_URL}/staff`);
+        if (response.ok) {
+            const allStaff = await response.json();
+            // Separate into employees and other staff
+            employees = allStaff.filter(s => s.type === 'employee');
+            otherStaff = allStaff.filter(s => s.type === 'other');
         } else {
-            employees.splice(index, 1);
+            console.error('Failed to load staff from API');
+            employees = [];
+            otherStaff = [];
         }
-        saveEmployeesToStorage();
-        renderEmployeesList();
-        renderDashboard();
+    } catch (error) {
+        console.error('Error loading staff from API:', error);
+        employees = [];
+        otherStaff = [];
     }
 }
 
-// Initialize employees on load
-loadEmployeesFromStorage();
+// Add new employee (via API)
+async function addEmployee(empData) {
+    try {
+        const staffData = {
+            name: empData.name,
+            standardHours: empData.standardHours,
+            type: empData.type === 'other' ? 'other' : 'employee',
+            role: empData.role || 'Staff',
+            workTime: empData.workTime || 'N/A'
+        };
+        const response = await fetch(`${STAFF_API_URL}/staff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(staffData)
+        });
+        if (response.ok) {
+            await loadEmployeesFromAPI();
+            renderEmployeesList();
+            renderDashboard();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to add employee');
+        }
+    } catch (error) {
+        console.error('Error adding employee:', error);
+        alert('Error adding employee');
+    }
+}
+
+// Edit existing employee (via API)
+async function editEmployee(index, empData) {
+    const list = empData.type === 'other' ? otherStaff : employees;
+    const staff = list[index];
+    if (!staff || !staff._id) {
+        console.error('Staff not found or missing ID');
+        return;
+    }
+    try {
+        const staffData = {
+            name: empData.name,
+            standardHours: empData.standardHours,
+            type: empData.type === 'other' ? 'other' : 'employee',
+            role: empData.role || 'Staff',
+            workTime: empData.workTime || 'N/A'
+        };
+        const response = await fetch(`${STAFF_API_URL}/staff/${staff._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(staffData)
+        });
+        if (response.ok) {
+            await loadEmployeesFromAPI();
+            renderEmployeesList();
+            renderDashboard();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to update employee');
+        }
+    } catch (error) {
+        console.error('Error updating employee:', error);
+        alert('Error updating employee');
+    }
+}
+
+// Delete employee (via API)
+async function deleteEmployee(index, isOtherStaff = false) {
+    const list = isOtherStaff ? otherStaff : employees;
+    const staff = list[index];
+    if (!staff || !staff._id) {
+        console.error('Staff not found or missing ID');
+        return;
+    }
+
+    if (confirm(`Are you sure you want to delete "${staff.name}"?\n\nThis action cannot be undone.`)) {
+        try {
+            const response = await fetch(`${STAFF_API_URL}/staff/${staff._id}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                await loadEmployeesFromAPI();
+                renderEmployeesList();
+                renderDashboard();
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to delete employee');
+            }
+        } catch (error) {
+            console.error('Error deleting employee:', error);
+            alert('Error deleting employee');
+        }
+    }
+}
 
 // Time slots configuration
 const timeSlots = [
@@ -131,6 +136,7 @@ let attendanceData = {};
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', async () => {
     initializeDateInput();
+    await loadEmployeesFromAPI();  // Load employees from database
     attendanceData = await loadAttendanceData();
     renderDashboard();
     setupEventListeners();

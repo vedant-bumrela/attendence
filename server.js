@@ -2,8 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const Attendance = require('./models/Attendance');
+const DoctorAttendance = require('./models/DoctorAttendance');
 const EmployeeAttendance = require('./models/EmployeeAttendance');
+const Doctor = require('./models/Doctor');
+const Employee = require('./models/Employee');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,7 +49,7 @@ mongoose.connect(MONGODB_URI)
         console.log('✅ Connected to MongoDB');
         // DROP LEGACY INDEX if it exists to allow multiple slots per doctor
         try {
-            await mongoose.model('Attendance').collection.dropIndex('date_1_doctorName_1');
+            await mongoose.model('DoctorAttendance').collection.dropIndex('date_1_doctorName_1');
             console.log('Dropped legacy unique index (date_doctor) to allow multi-slot attendance.');
         } catch (e) {
             // Index might not exist, which is fine
@@ -59,6 +61,10 @@ mongoose.connect(MONGODB_URI)
         } catch (e) {
             console.log('Index sync error (usually fine during migration):', e.message);
         }
+
+        // Seed default data if collections are empty
+        await seedDoctors();
+        await seedEmployees();
     })
     .catch((err) => {
         console.error('❌ MongoDB connection error:', err);
@@ -68,7 +74,7 @@ mongoose.connect(MONGODB_URI)
 // Helper function to convert MongoDB docs to old JSON format
 // Helper function to convert MongoDB docs to JSON format expected by frontend
 // Helper function to convert MongoDB docs to JSON format expected by frontend
-function formatAttendanceData(records) {
+function formatDoctorAttendanceData(records) {
     const formatted = {};
     records.forEach(record => {
         if (!formatted[record.date]) {
@@ -102,8 +108,8 @@ function formatAttendanceData(records) {
 // Get all attendance data
 app.get('/api/attendance', async (req, res) => {
     try {
-        const records = await Attendance.find();
-        const formatted = formatAttendanceData(records);
+        const records = await DoctorAttendance.find();
+        const formatted = formatDoctorAttendanceData(records);
         res.json(formatted);
     } catch (error) {
         console.error('Error fetching attendance:', error);
@@ -114,7 +120,7 @@ app.get('/api/attendance', async (req, res) => {
 // NEW: Get raw attendance records (sorted by date desc)
 app.get('/api/attendance/raw', async (req, res) => {
     try {
-        const records = await Attendance.find().sort({ date: -1, createdAt: -1 });
+        const records = await DoctorAttendance.find().sort({ date: -1, createdAt: -1 });
         res.json(records);
     } catch (error) {
         console.error('Error fetching raw attendance:', error);
@@ -125,7 +131,7 @@ app.get('/api/attendance/raw', async (req, res) => {
 // Get attendance for a specific date
 app.get('/api/attendance/:date', async (req, res) => {
     try {
-        const records = await Attendance.find({ date: req.params.date });
+        const records = await DoctorAttendance.find({ date: req.params.date });
         const formatted = {};
         records.forEach(record => {
             formatted[record.doctorName] = record.status;
@@ -144,7 +150,7 @@ app.get('/api/cabins/availability/:date/:slot', async (req, res) => {
         const slotNumber = parseInt(slot);
 
         // Find all occupied cabins for this date and slot
-        const occupiedRecords = await Attendance.find({
+        const occupiedRecords = await DoctorAttendance.find({
             date,
             slotNumber,
             cabinNumber: { $ne: null }
@@ -177,7 +183,7 @@ app.post('/api/attendance/:date', async (req, res) => {
         console.log('Received attendance data:', JSON.stringify(attendanceData, null, 2));
 
         // Delete existing records for this date
-        await Attendance.deleteMany({ date });
+        await DoctorAttendance.deleteMany({ date });
 
         // Insert new records
         // Insert new records
@@ -214,10 +220,10 @@ app.post('/api/attendance/:date', async (req, res) => {
         });
 
         if (records.length > 0) {
-            await Attendance.insertMany(records);
+            await DoctorAttendance.insertMany(records);
         }
 
-        res.json({ success: true, message: 'Attendance saved successfully' });
+        res.json({ success: true, message: 'DoctorAttendance saved successfully' });
     } catch (error) {
         console.error('Error saving attendance:', error);
         res.status(500).json({ success: false, message: 'Error saving data' });
@@ -232,10 +238,10 @@ app.put('/api/attendance/:date/:doctor', async (req, res) => {
 
         if (status === null || status === undefined) {
             // Delete the record
-            await Attendance.deleteOne({ date, doctorName: doctor });
+            await DoctorAttendance.deleteOne({ date, doctorName: doctor });
         } else {
             // Upsert (update or insert)
-            await Attendance.findOneAndUpdate(
+            await DoctorAttendance.findOneAndUpdate(
                 { date, doctorName: doctor },
                 { date, doctorName: doctor, status },
                 { upsert: true, new: true }
@@ -252,7 +258,7 @@ app.put('/api/attendance/:date/:doctor', async (req, res) => {
 // Export data as CSV
 app.get('/api/export/csv', async (req, res) => {
     try {
-        const records = await Attendance.find().sort({ date: 1 });
+        const records = await DoctorAttendance.find().sort({ date: 1 });
         const csvRows = [];
 
         // Header
@@ -284,6 +290,119 @@ app.get('/api/export/csv', async (req, res) => {
     } catch (error) {
         console.error('Error exporting CSV:', error);
         res.status(500).json({ error: 'Failed to export data' });
+    }
+});
+
+// ===== NO SHOW REPORT ENDPOINT =====
+// Get all absent doctor records for a date range
+app.get('/api/doctors/noshow-report', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: 'startDate and endDate are required' });
+        }
+
+        // Find all absent records in the date range
+        const records = await DoctorAttendance.find({
+            date: { $gte: startDate, $lte: endDate },
+            status: 'absent'
+        }).sort({ date: 1, doctorName: 1 });
+
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const slotNames = {
+            1: 'S1 (8:00 AM - 11:00 AM)',
+            2: 'S2 (11:00 AM - 2:00 PM)',
+            3: 'S3 (2:00 PM - 5:00 PM)',
+            4: 'S4 (5:00 PM - 8:00 PM)'
+        };
+
+        // Format the response
+        const report = records.map((record, index) => {
+            const date = new Date(record.date);
+            const dayName = days[date.getDay()];
+            const formattedDate = date.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+
+            return {
+                srNo: index + 1,
+                dayDate: `${dayName}, ${formattedDate}`,
+                doctorName: record.doctorName,
+                absentSlot: record.slotNumber ? slotNames[record.slotNumber] : (record.timeSlot || 'N/A'),
+                remark: record.remark || ''
+            };
+        });
+
+        res.json({
+            totalAbsences: report.length,
+            dateRange: { start: startDate, end: endDate },
+            records: report
+        });
+
+    } catch (error) {
+        console.error('Error generating no-show report:', error);
+        res.status(500).json({ error: 'Failed to generate no-show report' });
+    }
+});
+
+// Export No Show Report as CSV
+app.get('/api/doctors/noshow-report/csv', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: 'startDate and endDate are required' });
+        }
+
+        const records = await DoctorAttendance.find({
+            date: { $gte: startDate, $lte: endDate },
+            status: 'absent'
+        }).sort({ date: 1, doctorName: 1 });
+
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const slotNames = {
+            1: 'S1 (8:00 AM - 11:00 AM)',
+            2: 'S2 (11:00 AM - 2:00 PM)',
+            3: 'S3 (2:00 PM - 5:00 PM)',
+            4: 'S4 (5:00 PM - 8:00 PM)'
+        };
+
+        const csvRows = [];
+        // Header
+        csvRows.push(['Sr. #', 'Day & Date', 'Doctor Name', 'Absent Slot', 'Remark']);
+
+        records.forEach((record, index) => {
+            const date = new Date(record.date);
+            const dayName = days[date.getDay()];
+            const formattedDate = date.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+
+            csvRows.push([
+                index + 1,
+                `${dayName}, ${formattedDate}`,
+                record.doctorName,
+                record.slotNumber ? slotNames[record.slotNumber] : (record.timeSlot || 'N/A'),
+                record.remark || ''
+            ]);
+        });
+
+        const csvContent = csvRows.map(row =>
+            row.map(cell => `"${cell}"`).join(',')
+        ).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="noshow-report-${startDate}-to-${endDate}.csv"`);
+        res.send(csvContent);
+
+    } catch (error) {
+        console.error('Error exporting no-show CSV:', error);
+        res.status(500).json({ error: 'Failed to export no-show report' });
     }
 });
 
@@ -562,6 +681,250 @@ app.get('/api/health', (req, res) => {
         database: dbStatus,
         timestamp: new Date().toISOString()
     });
+});
+
+// ===== DOCTOR CONFIGURATION ENDPOINTS =====
+
+// Default doctors (used for initial seeding)
+const DEFAULT_DOCTORS = [
+    {
+        name: "Dr. Rajendra Tippanawar (GP)",
+        days: [1, 2, 3, 4, 5, 6],
+        slots: [2, 3],
+        timeRange: "11:00 AM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Dr. Maneesha Mhamane-Atre (Homeopath)",
+        days: [3, 6],
+        slots: [2],
+        specialSchedule: { 6: [2, 3] },
+        timeRange: "11:00 AM - 2:00 PM (Wed), 11:00 AM - 5:00 PM (Sat)",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Dr. Ritesh Damle",
+        days: [1, 4],
+        slots: [1],
+        timeRange: "8:00 AM - 11:00 AM",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Dr. Madhu Kabadge (Homeopath)",
+        days: [2, 4],
+        slots: [2],
+        timeRange: "11:00 AM - 2:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Dr. Prajakta Deshmukh (Gynacologist)",
+        days: [3, 5],
+        slots: [3],
+        timeRange: "2:00 PM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Dr. Chaitanya Bhujbal (GP)",
+        days: [2, 3, 4],
+        slots: [2, 3],
+        timeRange: "11:00 AM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Dr. Apeksha Thakar (Ayurveda)",
+        days: [1, 2, 3, 4, 5, 6],
+        slots: [4],
+        timeRange: "5:00 PM - 8:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
+    },
+    {
+        name: "Mr. Rupak Marulkar (Yoga and Nutritionist)",
+        days: [1, 2, 3, 4, 5],
+        slots: [2, 3],
+        timeRange: "11:00 AM - 5:00 PM",
+        joiningDate: "2024-01-01",
+        active: true
+    }
+];
+
+// Default employees (used for initial seeding)
+const DEFAULT_EMPLOYEES = [
+    { name: "Ms. Shreya Talekar", standardHours: 6, type: "employee" },
+    { name: "Ms. Aditi Deshpande", standardHours: 6, type: "employee" },
+    { name: "Mr. Vedant Bumrela", standardHours: 3, type: "employee" },
+    { name: "Dr. Rajendra Tippanwar", standardHours: 6, type: "employee" },
+    { name: "Ms. Anuradha Sapkal", standardHours: 7, type: "other", role: "Maid", workTime: "10:00 AM - 5:00 PM" }
+];
+
+// Seed doctors if collection is empty
+async function seedDoctors() {
+    try {
+        const count = await Doctor.countDocuments();
+        if (count === 0) {
+            await Doctor.insertMany(DEFAULT_DOCTORS);
+            console.log('✅ Seeded default doctors to database');
+        }
+    } catch (error) {
+        console.error('Error seeding doctors:', error.message);
+    }
+}
+
+// Seed employees if collection is empty
+async function seedEmployees() {
+    try {
+        const count = await Employee.countDocuments();
+        if (count === 0) {
+            await Employee.insertMany(DEFAULT_EMPLOYEES);
+            console.log('✅ Seeded default employees to database');
+        }
+    } catch (error) {
+        console.error('Error seeding employees:', error.message);
+    }
+}
+
+// Get all doctors
+app.get('/api/doctors', async (req, res) => {
+    try {
+        const doctors = await Doctor.find().sort({ name: 1 });
+        res.json(doctors);
+    } catch (error) {
+        console.error('Error fetching doctors:', error);
+        res.status(500).json({ error: 'Failed to fetch doctors' });
+    }
+});
+
+// Create new doctor
+app.post('/api/doctors', async (req, res) => {
+    try {
+        const doctor = new Doctor(req.body);
+        await doctor.save();
+        res.status(201).json({ success: true, doctor });
+    } catch (error) {
+        console.error('Error creating doctor:', error);
+        if (error.code === 11000) {
+            res.status(400).json({ error: 'Doctor with this name already exists' });
+        } else {
+            res.status(500).json({ error: 'Failed to create doctor' });
+        }
+    }
+});
+
+// Update doctor by ID
+app.put('/api/doctors/:id', async (req, res) => {
+    try {
+        const doctor = await Doctor.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!doctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+        res.json({ success: true, doctor });
+    } catch (error) {
+        console.error('Error updating doctor:', error);
+        res.status(500).json({ error: 'Failed to update doctor' });
+    }
+});
+
+// Delete doctor by ID
+app.delete('/api/doctors/:id', async (req, res) => {
+    try {
+        const doctor = await Doctor.findByIdAndDelete(req.params.id);
+        if (!doctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+        res.json({ success: true, message: 'Doctor deleted' });
+    } catch (error) {
+        console.error('Error deleting doctor:', error);
+        res.status(500).json({ error: 'Failed to delete doctor' });
+    }
+});
+
+// ===== STAFF CONFIGURATION ENDPOINTS =====
+
+// Get all staff (employees + other)
+app.get('/api/staff', async (req, res) => {
+    try {
+        const staff = await Employee.find().sort({ type: 1, name: 1 });
+        res.json(staff);
+    } catch (error) {
+        console.error('Error fetching staff:', error);
+        res.status(500).json({ error: 'Failed to fetch staff' });
+    }
+});
+
+// Create new staff member
+app.post('/api/staff', async (req, res) => {
+    try {
+        const staff = new Employee(req.body);
+        await staff.save();
+        res.status(201).json({ success: true, staff });
+    } catch (error) {
+        console.error('Error creating staff:', error);
+        if (error.code === 11000) {
+            res.status(400).json({ error: 'Staff member with this name already exists' });
+        } else {
+            res.status(500).json({ error: 'Failed to create staff member' });
+        }
+    }
+});
+
+// Update staff by ID
+app.put('/api/staff/:id', async (req, res) => {
+    try {
+        const staff = await Employee.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!staff) {
+            return res.status(404).json({ error: 'Staff member not found' });
+        }
+        res.json({ success: true, staff });
+    } catch (error) {
+        console.error('Error updating staff:', error);
+        res.status(500).json({ error: 'Failed to update staff member' });
+    }
+});
+
+// Delete staff by ID
+app.delete('/api/staff/:id', async (req, res) => {
+    try {
+        const staff = await Employee.findByIdAndDelete(req.params.id);
+        if (!staff) {
+            return res.status(404).json({ error: 'Staff member not found' });
+        }
+        res.json({ success: true, message: 'Staff member deleted' });
+    } catch (error) {
+        console.error('Error deleting staff:', error);
+        res.status(500).json({ error: 'Failed to delete staff member' });
+    }
+});
+
+// ===== COUNTS ENDPOINT (for home page) =====
+app.get('/api/counts', async (req, res) => {
+    try {
+        const doctorCount = await Doctor.countDocuments({ active: true });
+        const employeeCount = await Employee.countDocuments({ type: 'employee', active: { $ne: false } });
+        const otherStaffCount = await Employee.countDocuments({ type: 'other', active: { $ne: false } });
+
+        res.json({
+            doctors: doctorCount,
+            employees: employeeCount,
+            otherStaff: otherStaffCount
+        });
+    } catch (error) {
+        console.error('Error fetching counts:', error);
+        res.status(500).json({ error: 'Failed to fetch counts' });
+    }
 });
 
 // Start server

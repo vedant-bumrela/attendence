@@ -1,127 +1,103 @@
+// ===== API CONFIGURATION =====
+const API_URL = 'http://localhost:3000/api';
+
 // ===== DOCTOR SCHEDULES =====
-const DEFAULT_DOCTORS = [
-    {
-        name: "Dr. Rajendra Tippanawar (GP)",
-        days: [1, 2, 3, 4, 5, 6],
-        slots: [2, 3],
-        timeRange: "11:00 AM - 5:00 PM",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Dr. Maneesha Mhamane-Atre (Homeopath)",
-        days: [3, 6],
-        slots: [2],
-        specialSchedule: {
-            6: [2, 3]
-        },
-        timeRange: "11:00 AM - 2:00 PM (Wed), 11:00 AM - 5:00 PM (Sat)",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Dr. Ritesh Damle",
-        days: [1, 4],
-        slots: [1],
-        timeRange: "8:00 AM - 11:00 AM",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Dr. Madhu Kabadge (Homeopath)",
-        days: [2, 4],
-        slots: [2],
-        timeRange: "11:00 AM - 2:00 PM",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Dr. Prajakta Deshmukh (Gynacologist)",
-        days: [3, 5],
-        slots: [3],
-        timeRange: "2:00 PM - 5:00 PM",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Dr. Chaitanya Bhujbal (GP)",
-        days: [2, 3, 4],
-        slots: [2, 3],
-        timeRange: "11:00 AM - 5:00 PM",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Dr. Apeksha Thakar (Ayurveda)",
-        days: [1, 2, 3, 4, 5, 6],
-        slots: [4],
-        timeRange: "5:00 PM - 8:00 PM",
-        joiningDate: "2024-01-01",
-        active: true
-    },
-    {
-        name: "Mr. Rupak Marulkar (Yoga and Nutritionist)",
-        days: [1, 2, 3, 4, 5],
-        slots: [2, 3],
-        timeRange: "11:00 AM - 5:00 PM",
-        joiningDate: "2024-01-01",
-        active: true
-    }
-];
+// Doctors are now loaded from the database API instead of localStorage
 
 let doctors = [];
 
-// Load doctors from localStorage or use defaults
-function loadDoctorsFromStorage() {
-    const stored = localStorage.getItem('clinic_doctors');
-    if (stored) {
-        try {
-            doctors = JSON.parse(stored);
-        } catch (e) {
-            console.error('Error loading doctors:', e);
-            doctors = [...DEFAULT_DOCTORS];
-            saveDoctorsToStorage();
+// Load doctors from API
+async function loadDoctorsFromAPI() {
+    try {
+        const response = await fetch(`${API_URL}/doctors`);
+        if (response.ok) {
+            doctors = await response.json();
+        } else {
+            console.error('Failed to load doctors from API');
+            doctors = [];
         }
-    } else {
-        doctors = [...DEFAULT_DOCTORS];
-        saveDoctorsToStorage();
+    } catch (error) {
+        console.error('Error loading doctors from API:', error);
+        doctors = [];
     }
 }
 
-// Save doctors to localStorage
-function saveDoctorsToStorage() {
-    localStorage.setItem('clinic_doctors', JSON.stringify(doctors));
+// Add new doctor (via API)
+async function addDoctor(doctorData) {
+    try {
+        const response = await fetch(`${API_URL}/doctors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(doctorData)
+        });
+        if (response.ok) {
+            await loadDoctorsFromAPI();
+            renderDoctorsList();
+            renderDashboard();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to add doctor');
+        }
+    } catch (error) {
+        console.error('Error adding doctor:', error);
+        alert('Error adding doctor');
+    }
 }
 
-// Add new doctor
-function addDoctor(doctorData) {
-    doctors.push(doctorData);
-    saveDoctorsToStorage();
-    renderDoctorsList();
-    renderDashboard();
-}
-
-// Edit existing doctor
-function editDoctor(index, doctorData) {
-    doctors[index] = doctorData;
-    saveDoctorsToStorage();
-    renderDoctorsList();
-    renderDashboard();
-}
-
-// Toggle doctor active/inactive status
-function toggleDoctorStatus(index) {
+// Edit existing doctor (via API)
+async function editDoctor(index, doctorData) {
     const doctor = doctors[index];
-    const newStatus = !(doctor.active !== false);
-
-    doctors[index].active = newStatus;
-    saveDoctorsToStorage();
-    renderDoctorsList();
-    renderDashboard();
+    if (!doctor || !doctor._id) {
+        console.error('Doctor not found or missing ID');
+        return;
+    }
+    try {
+        const response = await fetch(`${API_URL}/doctors/${doctor._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(doctorData)
+        });
+        if (response.ok) {
+            await loadDoctorsFromAPI();
+            renderDoctorsList();
+            renderDashboard();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to update doctor');
+        }
+    } catch (error) {
+        console.error('Error updating doctor:', error);
+        alert('Error updating doctor');
+    }
 }
 
-// Initialize doctors on load
-loadDoctorsFromStorage();
+// Toggle doctor active/inactive status (via API)
+async function toggleDoctorStatus(index) {
+    const doctor = doctors[index];
+    if (!doctor || !doctor._id) {
+        console.error('Doctor not found or missing ID');
+        return;
+    }
+    const newStatus = !(doctor.active !== false);
+    try {
+        const response = await fetch(`${API_URL}/doctors/${doctor._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: newStatus })
+        });
+        if (response.ok) {
+            await loadDoctorsFromAPI();
+            renderDoctorsList();
+            renderDashboard();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to update doctor status');
+        }
+    } catch (error) {
+        console.error('Error toggling doctor status:', error);
+        alert('Error toggling doctor status');
+    }
+}
 
 // ===== STATE MANAGEMENT =====
 let selectedDate = new Date();
@@ -130,6 +106,7 @@ let attendanceData = {};
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', async () => {
     initializeDateInput();
+    await loadDoctorsFromAPI();  // Load doctors from database
     attendanceData = await loadAttendanceData();
     renderDashboard();
     setupEventListeners();
@@ -424,7 +401,6 @@ function handleCabinChange(event) {
 
 
 // ===== DATA PERSISTENCE =====
-const API_URL = 'http://localhost:3000/api';
 
 async function loadAttendanceData() {
     try {
@@ -582,6 +558,8 @@ function setupEventListeners() {
                 refreshDatabaseView();
             } else if (tab.dataset.tab === 'cabins') {
                 renderCabinOverview();
+            } else if (tab.dataset.tab === 'noshow') {
+                initializeNoShowView();
             }
         });
     });
@@ -916,3 +894,97 @@ function clearFilters() {
     document.getElementById('cabinFilter').value = '';
     document.getElementById('availabilityResults').innerHTML = '<p class="hint-text">Select a day to see cabin availability</p>';
 }
+
+// ===== NO SHOW REPORT FUNCTIONS =====
+
+// Initialize No Show view with default dates
+function initializeNoShowView() {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const startInput = document.getElementById('noshowStartDate');
+    const endInput = document.getElementById('noshowEndDate');
+
+    if (startInput && endInput) {
+        startInput.value = formatDateForInput(firstDayOfMonth);
+        endInput.value = formatDateForInput(today);
+        startInput.max = formatDateForInput(today);
+        endInput.max = formatDateForInput(today);
+    }
+}
+
+// Generate No Show Report
+async function generateNoShowReport() {
+    const startDate = document.getElementById('noshowStartDate').value;
+    const endDate = document.getElementById('noshowEndDate').value;
+
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('Start date must be before or equal to end date');
+        return;
+    }
+
+    const tbody = document.getElementById('noshowTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading...</td></tr>';
+
+    try {
+        const response = await fetch(`${API_URL}/doctors/noshow-report?startDate=${startDate}&endDate=${endDate}`);
+
+        if (response.ok) {
+            const data = await response.json();
+            renderNoShowTable(data);
+
+            // Show summary and export button
+            document.getElementById('noshowSummary').style.display = 'block';
+            document.getElementById('totalAbsences').textContent = data.totalAbsences;
+            document.getElementById('exportNoshowBtn').style.display = 'inline-block';
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Failed to load report</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error generating no-show report:', error);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Error connecting to server</td></tr>';
+    }
+}
+
+// Render No Show Table
+function renderNoShowTable(data) {
+    const tbody = document.getElementById('noshowTableBody');
+    tbody.innerHTML = '';
+
+    if (data.records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No absences found for the selected date range 🎉</td></tr>';
+        return;
+    }
+
+    data.records.forEach(record => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${record.srNo}</td>
+            <td>${record.dayDate}</td>
+            <td style="font-weight: 500;">${record.doctorName}</td>
+            <td>${record.absentSlot}</td>
+            <td>${record.remark || '-'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Export No Show Report as CSV
+function exportNoShowCSV() {
+    const startDate = document.getElementById('noshowStartDate').value;
+    const endDate = document.getElementById('noshowEndDate').value;
+
+    if (!startDate || !endDate) {
+        alert('Please generate a report first');
+        return;
+    }
+
+    // Direct download
+    window.location.href = `${API_URL}/doctors/noshow-report/csv?startDate=${startDate}&endDate=${endDate}`;
+}
+

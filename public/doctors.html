@@ -22,6 +22,7 @@
                 <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
                 <button class="nav-tab" data-tab="cabins">Cabin Overview</button>
                 <button class="nav-tab" data-tab="database">Database Records</button>
+                <button class="nav-tab" data-tab="noshow">No Show Report</button>
                 <button class="nav-tab" data-tab="manage">Manage Doctors</button>
             </div>
 
@@ -205,6 +206,47 @@
             </div>
         </div>
     </main>
+
+    <!-- VIEW: No Show Report -->
+    <div id="noshowView" class="view-section" style="display: none;">
+        <div class="db-header">
+            <h2>No Show Report</h2>
+            <div class="report-controls">
+                <div class="date-range-inputs">
+                    <label>From:</label>
+                    <input type="date" id="noshowStartDate">
+                    <label>To:</label>
+                    <input type="date" id="noshowEndDate">
+                </div>
+                <button class="btn btn-secondary" onclick="generateNoShowReport()">Generate Report</button>
+                <button class="btn btn-primary" onclick="exportNoShowCSV()" id="exportNoshowBtn"
+                    style="display: none;">Download CSV</button>
+            </div>
+        </div>
+        <div class="report-summary" id="noshowSummary" style="display: none;">
+            <p><strong>Total Absences:</strong> <span id="totalAbsences">0</span></p>
+        </div>
+        <div class="table-container">
+            <table class="history-table db-table">
+                <thead>
+                    <tr>
+                        <th>Sr. #</th>
+                        <th>Day & Date</th>
+                        <th>Doctor Name</th>
+                        <th>Absent Slot</th>
+                        <th>Remark</th>
+                    </tr>
+                </thead>
+                <tbody id="noshowTableBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            Select a date range and click "Generate Report"
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <!-- Manage Doctors View -->
     <div id="manageView" class="view-section" style="display: none;">
