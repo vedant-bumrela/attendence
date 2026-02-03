@@ -6,6 +6,7 @@ const DoctorAttendance = require('./models/DoctorAttendance');
 const EmployeeAttendance = require('./models/EmployeeAttendance');
 const Doctor = require('./models/Doctor');
 const Employee = require('./models/Employee');
+const Holiday = require('./models/Holiday');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -281,12 +282,16 @@ app.get('/api/export/csv', async (req, res) => {
 
         // Convert to CSV string
         const csvContent = csvRows.map(row =>
-            row.map(cell => `"${cell}"`).join(',')
-        ).join('\n');
+            row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+        ).join('\r\n');
 
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="attendance-export-${new Date().toISOString().split('T')[0]}.csv"`);
-        res.send(csvContent);
+        // Add UTF-8 BOM for Excel compatibility
+        const BOM = '\uFEFF';
+        const csvWithBOM = BOM + csvContent;
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="doctor-attendance-export-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csvWithBOM);
     } catch (error) {
         console.error('Error exporting CSV:', error);
         res.status(500).json({ error: 'Failed to export data' });
@@ -393,12 +398,16 @@ app.get('/api/doctors/noshow-report/csv', async (req, res) => {
         });
 
         const csvContent = csvRows.map(row =>
-            row.map(cell => `"${cell}"`).join(',')
-        ).join('\n');
+            row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+        ).join('\r\n');
 
-        res.setHeader('Content-Type', 'text/csv');
+        // Add UTF-8 BOM for Excel compatibility
+        const BOM = '\uFEFF';
+        const csvWithBOM = BOM + csvContent;
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="noshow-report-${startDate}-to-${endDate}.csv"`);
-        res.send(csvContent);
+        res.send(csvWithBOM);
 
     } catch (error) {
         console.error('Error exporting no-show CSV:', error);
@@ -572,16 +581,68 @@ app.get('/api/employees/analytics', async (req, res) => {
             return res.status(400).json({ error: 'startDate and endDate are required' });
         }
 
-        // Calculate total working days (excluding Sundays)
         const start = new Date(startDate);
         const end = new Date(endDate);
-        let totalWorkingDays = 0;
-        let current = new Date(start);
 
-        while (current <= end) {
-            if (current.getDay() !== 0) { // Not Sunday
-                totalWorkingDays++;
+        // Sunday schedule start date (Jan 18, 2026) - Vedant works Sundays from this date
+        const SUNDAY_SCHEDULE_START = new Date('2026-01-18');
+        const SUNDAY_EMPLOYEE = 'Mr. Vedant Bumrela';
+
+        // Fetch all holidays in date range
+        const holidays = await Holiday.find({
+            date: { $gte: startDate, $lte: endDate }
+        });
+        const holidayDates = new Set(holidays.map(h => h.date));
+
+        // Helper function to format date as YYYY-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Helper function to calculate working days for an employee
+        function calculateWorkingDays(employeeName) {
+            let workingDays = 0;
+            let current = new Date(start);
+
+            while (current <= end) {
+                const dateStr = formatDate(current);
+                const isSunday = current.getDay() === 0;
+                const isHoliday = holidayDates.has(dateStr);
+                const isAfterSundayScheduleStart = current >= SUNDAY_SCHEDULE_START;
+
+                // Skip holidays for everyone
+                if (isHoliday) {
+                    current.setDate(current.getDate() + 1);
+                    continue;
+                }
+
+                if (isSunday && isAfterSundayScheduleStart) {
+                    // Only Vedant works on Sundays after Jan 18, 2026
+                    if (employeeName === SUNDAY_EMPLOYEE) {
+                        workingDays++;
+                    }
+                    // Other employees don't work Sundays, so don't count
+                } else if (!isSunday) {
+                    // Non-Sundays count for everyone
+                    workingDays++;
+                } else {
+                    // Sundays before Jan 18, 2026 - no one works, don't count for anyone
+                }
+
+                current.setDate(current.getDate() + 1);
             }
+
+            return workingDays;
+        }
+
+        // Calculate total calendar days (for display)
+        let totalCalendarDays = 0;
+        let current = new Date(start);
+        while (current <= end) {
+            totalCalendarDays++;
             current.setDate(current.getDate() + 1);
         }
 
@@ -606,7 +667,8 @@ app.get('/api/employees/analytics', async (req, res) => {
                 presentDays: new Set(),
                 absentDays: new Set(),
                 totalSlotAttendances: 0,
-                totalOvertimeHours: 0
+                totalOvertimeHours: 0,
+                workingDays: calculateWorkingDays(emp.name)
             };
         });
 
@@ -619,7 +681,8 @@ app.get('/api/employees/analytics', async (req, res) => {
                     presentDays: new Set(),
                     absentDays: new Set(),
                     totalSlotAttendances: 0,
-                    totalOvertimeHours: 0
+                    totalOvertimeHours: 0,
+                    workingDays: calculateWorkingDays(empName)
                 };
             }
 
@@ -640,14 +703,16 @@ app.get('/api/employees/analytics', async (req, res) => {
         const employeeList = Object.values(employeeStats).map(emp => {
             const presentDaysCount = emp.presentDays.size;
             const absentDaysCount = emp.absentDays.size;
-            const attendanceRate = totalWorkingDays > 0
-                ? ((presentDaysCount / totalWorkingDays) * 100).toFixed(2)
+            const workingDays = emp.workingDays;
+            const attendanceRate = workingDays > 0
+                ? ((presentDaysCount / workingDays) * 100).toFixed(2)
                 : 0;
 
             return {
                 name: emp.name,
                 presentDays: presentDaysCount,
                 absentDays: absentDaysCount,
+                workingDays: workingDays,
                 attendanceRate: parseFloat(attendanceRate),
                 totalSlotAttendances: emp.totalSlotAttendances,
                 totalOvertimeHours: parseFloat(emp.totalOvertimeHours.toFixed(2))
@@ -658,7 +723,7 @@ app.get('/api/employees/analytics', async (req, res) => {
         employeeList.sort((a, b) => a.name.localeCompare(b.name));
 
         res.json({
-            totalWorkingDays,
+            totalWorkingDays: totalCalendarDays,
             totalRecordedDays,
             dateRange: {
                 start: startDate,
@@ -670,6 +735,55 @@ app.get('/api/employees/analytics', async (req, res) => {
     } catch (error) {
         console.error('Error generating analytics:', error);
         res.status(500).json({ error: 'Failed to generate analytics' });
+    }
+});
+
+// ===== HOLIDAY MANAGEMENT ENDPOINTS =====
+
+// Get all holidays
+app.get('/api/holidays', async (req, res) => {
+    try {
+        const holidays = await Holiday.find().sort({ date: 1 });
+        res.json(holidays);
+    } catch (error) {
+        console.error('Error fetching holidays:', error);
+        res.status(500).json({ error: 'Failed to fetch holidays' });
+    }
+});
+
+// Add a new holiday
+app.post('/api/holidays', async (req, res) => {
+    try {
+        const { date, name, description } = req.body;
+
+        if (!date || !name) {
+            return res.status(400).json({ error: 'Date and name are required' });
+        }
+
+        const holiday = new Holiday({ date, name, description });
+        await holiday.save();
+        res.status(201).json({ success: true, holiday });
+    } catch (error) {
+        console.error('Error creating holiday:', error);
+        if (error.code === 11000) {
+            res.status(400).json({ error: 'A holiday already exists on this date' });
+        } else {
+            res.status(500).json({ error: 'Failed to create holiday' });
+        }
+    }
+});
+
+// Delete a holiday
+app.delete('/api/holidays/:id', async (req, res) => {
+    try {
+        const holiday = await Holiday.findByIdAndDelete(req.params.id);
+        if (!holiday) {
+            return res.status(404).json({ error: 'Holiday not found' });
+        }
+        res.json({ success: true, message: 'Holiday deleted' });
+    } catch (error) {
+        console.error('Error deleting holiday:', error);
+        res.status(500).json({ error: 'Failed to delete holiday' });
     }
 });
 

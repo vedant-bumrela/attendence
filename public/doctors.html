@@ -22,7 +22,6 @@
                 <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
                 <button class="nav-tab" data-tab="cabins">Cabin Overview</button>
                 <button class="nav-tab" data-tab="database">Database Records</button>
-                <button class="nav-tab" data-tab="noshow">No Show Report</button>
                 <button class="nav-tab" data-tab="manage">Manage Doctors</button>
             </div>
 
@@ -98,7 +97,10 @@
         <div id="databaseView" class="view-section" style="display: none;">
             <div class="db-header">
                 <h2>MongoDB Records</h2>
-                <button class="btn btn-secondary" onclick="refreshDatabaseView()">Refresh Data</button>
+                <div class="db-header-actions">
+                    <button class="btn btn-primary" onclick="goToNoShowReport()">No Show Report</button>
+                    <button class="btn btn-secondary" onclick="refreshDatabaseView()">Refresh Data</button>
+                </div>
             </div>
             <div class="table-container">
                 <table class="history-table db-table">
@@ -277,6 +279,10 @@
                 <div class="form-group">
                     <label>Working Days *</label>
                     <div class="slot-checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="days" value="0" checked>
+                            <span>Sun</span>
+                        </label>
                         <label class="checkbox-label">
                             <input type="checkbox" name="days" value="1" checked>
                             <span>Mon</span>

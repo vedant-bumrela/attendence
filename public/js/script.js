@@ -565,6 +565,26 @@ function setupEventListeners() {
     });
 }
 
+// Navigate to No Show Report view
+function goToNoShowReport() {
+    // Hide all views
+    document.querySelectorAll('.view-section').forEach(v => {
+        v.style.display = 'none';
+        v.classList.remove('active');
+    });
+
+    // Remove active from all tabs
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+    // Show No Show Report view
+    const noshowView = document.getElementById('noshowView');
+    if (noshowView) {
+        noshowView.style.display = 'block';
+        setTimeout(() => noshowView.classList.add('active'), 10);
+        initializeNoShowView();
+    }
+}
+
 // ===== DATABASE VIEW =====
 async function refreshDatabaseView() {
     const tbody = document.getElementById('databaseTableBody');

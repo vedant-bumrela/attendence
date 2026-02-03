@@ -24,6 +24,7 @@
                 <button class="nav-tab" data-tab="database">Database Records</button>
                 <button class="nav-tab" data-tab="reports">Reports</button>
                 <button class="nav-tab" data-tab="manage">Manage Employees</button>
+                <button class="nav-tab" data-tab="holidays">Holidays</button>
             </div>
 
             <div class="header-controls">
@@ -50,11 +51,13 @@
                 <div class="day-name" id="dayNameDisplay"></div>
             </div>
 
-            <!-- Sunday Warning -->
+
+
+            <!-- Sunday Warning (Clinic Closed) -->
             <div id="sundayWarning" class="sunday-warning" style="display: none;">
-                <div class="warning-icon">🌙</div>
-                <h3>Clinic Closed - Sunday</h3>
-                <p>Employees do not work on Sundays. Please select a different date.</p>
+                <div class="warning-icon">🏖️</div>
+                <h3>Clinic Closed</h3>
+                <p>The clinic is closed on Sundays (before Jan 18, 2026).</p>
             </div>
 
             <!-- Time Slots Container -->
@@ -152,7 +155,7 @@
                     <div class="card-content">
                         <div class="card-value" id="totalWorkingDays">-</div>
                         <div class="card-label">Total Working Days</div>
-                        <div class="card-sublabel">(Excluding Sundays)</div>
+                        <div class="card-sublabel">All Days</div>
                     </div>
                 </div>
 
@@ -253,6 +256,48 @@
         <div class="doctors-list-card">
             <h3>Current Employees</h3>
             <div id="employeesList"></div>
+        </div>
+    </div>
+
+    <!-- VIEW: Holidays -->
+    <div id="holidaysView" class="view-section" style="display: none;">
+        <div class="manage-header">
+            <h2>Manage Holidays</h2>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Add holidays to exclude them from working days
+                calculations</p>
+        </div>
+
+        <!-- Add Holiday Form -->
+        <div class="doctor-form-card">
+            <h3>Add New Holiday</h3>
+            <form id="holidayForm">
+                <div class="form-group">
+                    <label for="holidayDate">Date <span class="required">*</span></label>
+                    <input type="date" id="holidayDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="holidayName">Holiday Name <span class="required">*</span></label>
+                    <input type="text" id="holidayName" placeholder="e.g., Republic Day" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="holidayDesc">Description (Optional)</label>
+                    <input type="text" id="holidayDesc" placeholder="e.g., National Holiday">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Add Holiday</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Holidays List -->
+        <div class="doctors-list-card">
+            <h3>Upcoming Holidays</h3>
+            <div id="holidaysList" class="holidays-list">
+                <!-- Populated by JS -->
+            </div>
         </div>
     </div>
 

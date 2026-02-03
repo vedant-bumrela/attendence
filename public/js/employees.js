@@ -129,6 +129,14 @@ const timeSlots = [
     { number: 3, name: "Evening Shift", time: "5:00 PM - 8:00 PM" }
 ];
 
+// Sunday-specific configuration: single slot with only Vedant Bumrela
+// This schedule started from January 18th, 2026
+const sundayTimeSlots = [
+    { number: 1, name: "Sunday Shift", time: "2:00 PM - 8:00 PM" }
+];
+const SUNDAY_EMPLOYEE_NAME = "Mr. Vedant Bumrela";
+const SUNDAY_SCHEDULE_START_DATE = new Date('2026-01-18'); // Sunday schedule starts from this date
+
 // ===== STATE MANAGEMENT =====
 let selectedDate = new Date();
 let attendanceData = {};
@@ -223,13 +231,7 @@ function formatOvertimeDisplay(overtimeHours) {
 // ===== RENDERING =====
 function renderDashboard() {
     updateDateDisplay();
-
-    if (isSunday(selectedDate)) {
-        showSundayWarning();
-    } else {
-        hideSundayWarning();
-        renderEmployeeSlots();
-    }
+    renderEmployeeSlots(); // Now works on all days including Sundays
 }
 
 function updateDateDisplay() {
@@ -249,24 +251,94 @@ function hideSundayWarning() {
 
 function renderEmployeeSlots() {
     const dateKey = getDateKey(selectedDate);
+    const isSundayToday = isSunday(selectedDate);
+
+    // Normalize dates to ignore time components for correct comparison
+    const currentDate = new Date(selectedDate);
+    currentDate.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(SUNDAY_SCHEDULE_START_DATE);
+    startDate.setHours(0, 0, 0, 0);
+
+    const isAfterStart = currentDate.getTime() >= startDate.getTime();
+
+    // Reset visibility
+    const warningEl = document.getElementById('sundayWarning');
+    const slotsContainer = document.getElementById('slotsContainer');
+    const otherStaffSection = document.querySelector('.other-staff-section');
+
+    if (warningEl) warningEl.style.display = 'none';
+    if (slotsContainer) slotsContainer.style.display = 'block';
 
     // Clear all slots
     for (let i = 1; i <= 3; i++) {
         document.getElementById(`slot${i}`).innerHTML = '';
     }
 
-    // Render all employees in all slots
-    timeSlots.forEach(slot => {
-        const slotContainer = document.getElementById(`slot${slot.number}`);
+    // CASE 1: Sunday BEFORE Jan 18, 2026 => CLINIC CLOSED
+    if (isSundayToday && !isAfterStart) {
+        if (warningEl) warningEl.style.display = 'block';
+        if (slotsContainer) slotsContainer.style.display = 'none';
+        if (otherStaffSection) otherStaffSection.style.display = 'none';
+        return;
+    }
 
-        employees.forEach(employee => {
-            const employeeCard = createEmployeeCard(employee, dateKey, slot);
-            slotContainer.appendChild(employeeCard);
+    // Get slot sections for visibility control
+    const slotSections = document.querySelectorAll('.slot-section:not(.other-staff-section)');
+
+    // CASE 2: Sunday AFTER Jan 18, 2026 => VEDANT ONLY
+    if (isSundayToday && isAfterStart) {
+        // SUNDAY: Show only one slot with Vedant Bumrela
+        // Hide slots 2 and 3 sections
+        slotSections.forEach((section, index) => {
+            if (index === 0) {
+                section.style.display = 'block';
+                // Update slot header for Sunday
+                const header = section.querySelector('h3');
+                const timeSpan = section.querySelector('.slot-time');
+                if (header) header.textContent = 'Sunday Shift';
+                if (timeSpan) timeSpan.textContent = '2:00 PM - 8:00 PM';
+            } else {
+                section.style.display = 'none';
+            }
         });
-    });
 
-    // Render other staff (once per day, not per slot)
-    renderOtherStaff(dateKey);
+        // Find Vedant Bumrela from employees list
+        const sundayEmployee = employees.find(emp => emp.name === SUNDAY_EMPLOYEE_NAME);
+        if (sundayEmployee) {
+            const slotContainer = document.getElementById('slot1');
+            const employeeCard = createEmployeeCard(sundayEmployee, dateKey, sundayTimeSlots[0]);
+            slotContainer.appendChild(employeeCard);
+        }
+
+        // Hide other staff section on Sundays
+        if (otherStaffSection) otherStaffSection.style.display = 'none';
+
+    } else {
+        // CASE 3: NORMAL DAY
+        slotSections.forEach((section, index) => {
+            section.style.display = 'block';
+            // Restore original slot headers
+            const header = section.querySelector('h3');
+            const timeSpan = section.querySelector('.slot-time');
+            if (header && timeSlots[index]) header.textContent = timeSlots[index].name;
+            if (timeSpan && timeSlots[index]) timeSpan.textContent = timeSlots[index].time;
+        });
+
+        // Render all employees in all slots
+        timeSlots.forEach(slot => {
+            const slotContainer = document.getElementById(`slot${slot.number}`);
+
+            employees.forEach(employee => {
+                const employeeCard = createEmployeeCard(employee, dateKey, slot);
+                slotContainer.appendChild(employeeCard);
+            });
+        });
+
+        // Show and render other staff section
+        if (otherStaffSection) otherStaffSection.style.display = 'block';
+        renderOtherStaff(dateKey);
+    }
 }
 
 function createEmployeeCard(employee, dateKey, slot) {
@@ -727,7 +799,7 @@ function renderEmployeeStatsTable(employees) {
 
         row.innerHTML = `
             <td style="font-weight: 600; color: var(--text-primary);">${emp.name}</td>
-            <td><span class="stat-badge present-badge">${emp.presentDays}</span></td>
+            <td><span class="stat-badge present-badge">${emp.presentDays} / ${emp.workingDays || '-'}</span></td>
             <td><span class="stat-badge absent-badge">${emp.absentDays}</span></td>
             <td><span class="stat-badge" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">${emp.totalOvertimeHours || 0} hrs</span></td>
             <td>
@@ -775,7 +847,7 @@ function downloadReportCSV() {
 
     // Summary section
     rows.push(['SUMMARY STATISTICS']);
-    rows.push(['Total Working Days (excluding Sundays):', totalWorkingDays]);
+    rows.push(['Total Working Days:', totalWorkingDays]);
     rows.push(['Days with Recorded Attendance:', totalRecordedDays]);
     rows.push([]);
 
@@ -797,27 +869,30 @@ function downloadReportCSV() {
 
     // Convert to CSV string
     const csvContent = rows.map(row =>
-        row.map(cell => `"${cell}"`).join(',')
-    ).join('\n');
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\r\n');
+
+    // Add UTF-8 BOM for Excel compatibility
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvContent;
 
     // Create download with proper filename
-    const filename = `attendance-report-${dateRange.start}-to-${dateRange.end}.csv`;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const filename = `employee-attendance-report-${dateRange.start}-to-${dateRange.end}.csv`;
+    const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8' });
 
-    // Use msSaveBlob for IE/Edge compatibility, otherwise use download link
-    if (navigator.msSaveBlob) {
-        navigator.msSaveBlob(blob, filename);
-    } else {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
+    // Create and trigger download
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    setTimeout(() => {
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
+        window.URL.revokeObjectURL(url);
+    }, 100);
 }
 
 // ===== EVENT LISTENERS =====
@@ -854,6 +929,9 @@ function setupEventListeners() {
             } else if (tab.dataset.tab === 'manage') {
                 renderEmployeesList();
                 setupEmployeeForm();
+            } else if (tab.dataset.tab === 'holidays') {
+                loadHolidays();
+                setupHolidayForm();
             }
         });
     });
@@ -999,4 +1077,158 @@ function resetEmployeeForm() {
     document.getElementById('empCancelBtn').style.display = 'none';
     document.getElementById('otherStaffFields').style.display = 'none';
     document.querySelector('input[name="empType"][value="regular"]').checked = true;
+}
+
+// ===== HOLIDAY MANAGEMENT =====
+async function loadHolidays() {
+    const listContainer = document.getElementById('holidaysList');
+    listContainer.innerHTML = '<p class="loading-text">Loading holidays...</p>';
+
+    try {
+        const response = await fetch(`${STAFF_API_URL}/holidays`);
+        if (response.ok) {
+            const holidays = await response.json();
+            renderHolidaysList(holidays);
+        } else {
+            listContainer.innerHTML = '<p class="error-text">Failed to load holidays</p>';
+        }
+    } catch (error) {
+        console.error('Error loading holidays:', error);
+        listContainer.innerHTML = '<p class="error-text">Error connecting to server</p>';
+    }
+}
+
+function renderHolidaysList(holidays) {
+    const listContainer = document.getElementById('holidaysList');
+    listContainer.innerHTML = '';
+
+    if (holidays.length === 0) {
+        listContainer.innerHTML = '<p class="no-data-text">No holidays added yet</p>';
+        return;
+    }
+
+    // Filter out past holidays (optional, but good for "Upcoming Holidays")
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcomingHolidays = holidays.filter(h => new Date(h.date) >= today);
+    const pastHolidays = holidays.filter(h => new Date(h.date) < today);
+
+    // Render upcoming
+    if (upcomingHolidays.length > 0) {
+        upcomingHolidays.forEach(holiday => {
+            listContainer.appendChild(createHolidayItem(holiday));
+        });
+    } else {
+        listContainer.innerHTML = '<p class="no-data-text">No upcoming holidays</p>';
+    }
+
+    // Render past (maybe in a collapsed section or just below)
+    if (pastHolidays.length > 0) {
+        const pastHeader = document.createElement('h4');
+        pastHeader.className = 'section-header';
+        pastHeader.style.marginTop = '2rem';
+        pastHeader.style.color = 'var(--text-secondary)';
+        pastHeader.textContent = 'Past Holidays';
+        listContainer.appendChild(pastHeader);
+
+        pastHolidays.forEach(holiday => {
+            const item = createHolidayItem(holiday);
+            item.classList.add('past-holiday');
+            listContainer.appendChild(item);
+        });
+    }
+}
+
+function createHolidayItem(holiday) {
+    const item = document.createElement('div');
+    item.className = 'doctor-item holiday-item';
+
+    const date = new Date(holiday.date);
+    const formattedDate = date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+
+    item.innerHTML = `
+        <div class="doctor-item-info">
+            <h4>${holiday.name}</h4>
+            <div class="holiday-date">
+                <span class="date-icon">📅</span> ${formattedDate}
+            </div>
+            ${holiday.description ? `<p class="holiday-desc">${holiday.description}</p>` : ''}
+        </div>
+        <div class="doctor-item-actions">
+            <button class="btn-icon btn-delete" onclick="deleteHoliday('${holiday._id}', '${holiday.name}')">Remove</button>
+        </div>
+    `;
+
+    return item;
+}
+
+async function setupHolidayForm() {
+    const form = document.getElementById('holidayForm');
+
+    // Remove existing listeners to avoid duplicates
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    newForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const date = document.getElementById('holidayDate').value;
+        const name = document.getElementById('holidayName').value.trim();
+        const description = document.getElementById('holidayDesc').value.trim();
+
+        if (!date || !name) {
+            alert('Date and Name are required');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${STAFF_API_URL}/holidays`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date, name, description })
+            });
+
+            if (response.ok) {
+                // Reset form
+                document.getElementById('holidayDate').value = '';
+                document.getElementById('holidayName').value = '';
+                document.getElementById('holidayDesc').value = '';
+
+                // Reload list
+                loadHolidays();
+                alert('Holiday added successfully');
+            } else {
+                const error = await response.json();
+                alert(error.error || 'Failed to add holiday');
+            }
+        } catch (error) {
+            console.error('Error adding holiday:', error);
+            alert(`Error adding holiday: ${error.message}`);
+        }
+    });
+}
+
+async function deleteHoliday(id, name) {
+    if (confirm(`Are you sure you want to remove "${name}" from holidays?`)) {
+        try {
+            const response = await fetch(`${STAFF_API_URL}/holidays/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadHolidays();
+            } else {
+                alert('Failed to delete holiday');
+            }
+        } catch (error) {
+            console.error('Error deleting holiday:', error);
+            alert('Error deleting holiday');
+        }
+    }
 }
