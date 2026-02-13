@@ -7,6 +7,7 @@
     <title>Doctor Attendance Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/date-navigation.css">
 </head>
 
 <body>
@@ -29,8 +30,16 @@
                 <a href="index.html" class="btn btn-secondary" style="text-decoration: none;">
                     Home
                 </a>
-                <div class="date-selector">
-                    <input type="date" id="dateInput">
+                <div class="date-navigation">
+                    <button class="btn-date-nav" id="prevDayBtn" title="Previous Day">
+                        ◀
+                    </button>
+                    <div class="date-selector">
+                        <input type="date" id="dateInput">
+                    </div>
+                    <button class="btn-date-nav" id="nextDayBtn" title="Next Day">
+                        ▶
+                    </button>
                 </div>
                 <button class="btn btn-primary" id="exportBtn">
                     Detailed report

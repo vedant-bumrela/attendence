@@ -39,7 +39,8 @@ function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
     const hoursWorked = totalMinutes / 60;
     const overtime = Math.max(0, hoursWorked - standardHours);
 
-    return parseFloat(overtime.toFixed(2));
+    // Round to nearest whole hour
+    return Math.round(overtime);
 }
 
 // MongoDB Connection
@@ -427,7 +428,11 @@ function formatEmployeeAttendanceData(records) {
             formattedData[dateKey] = {};
         }
 
-        const uniqueKey = `${record.employeeName}_Slot${record.slotNumber}`;
+        // Generate unique key based on slotNumber
+        // slotNumber 0 = Other Staff (use _Daily), otherwise use _SlotX
+        const uniqueKey = record.slotNumber === 0
+            ? `${record.employeeName}_Daily`
+            : `${record.employeeName}_Slot${record.slotNumber}`;
         formattedData[dateKey][uniqueKey] = {
             status: record.status,
             timeSlot: record.timeSlot,
@@ -471,7 +476,11 @@ app.get('/api/employees/attendance/:date', async (req, res) => {
         const formatted = {};
 
         records.forEach(record => {
-            const uniqueKey = `${record.employeeName}_Slot${record.slotNumber}`;
+            // Generate unique key based on slotNumber
+            // slotNumber 0 = Other Staff (use _Daily), otherwise use _SlotX
+            const uniqueKey = record.slotNumber === 0
+                ? `${record.employeeName}_Daily`
+                : `${record.employeeName}_Slot${record.slotNumber}`;
             formatted[uniqueKey] = {
                 status: record.status,
                 timeSlot: record.timeSlot,
@@ -501,8 +510,17 @@ app.post('/api/employees/attendance/:date', async (req, res) => {
         // Insert new records
         const recordsToInsert = [];
         for (const [key, data] of Object.entries(attendanceData)) {
-            // Extract employee name from key (format: "EmployeeName_SlotX")
-            const employeeName = key.substring(0, key.lastIndexOf('_Slot'));
+            // Extract employee name from key 
+            // Format can be: "EmployeeName_SlotX" or "EmployeeName_Daily"
+            let employeeName;
+            if (key.includes('_Slot')) {
+                employeeName = key.substring(0, key.lastIndexOf('_Slot'));
+            } else if (key.includes('_Daily')) {
+                employeeName = key.substring(0, key.lastIndexOf('_Daily'));
+            } else {
+                // Fallback: take everything before the last underscore
+                employeeName = key.substring(0, key.lastIndexOf('_'));
+            }
 
             // Find employee to get standard hours
             const employee = employees.find(emp => emp.name === employeeName);

@@ -194,12 +194,12 @@ function calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours) 
     const totalMinutes = (outHour * 60 + outMin) - (inHour * 60 + inMin);
     const hoursWorked = totalMinutes / 60;
 
-    // Calculate overtime or undertime
+    // Calculate overtime or undertime (rounded to whole hours)
     const difference = hoursWorked - standardHours;
 
     return {
-        overtime: difference > 0 ? parseFloat(difference.toFixed(2)) : 0,
-        undertime: difference < 0 ? parseFloat(Math.abs(difference).toFixed(2)) : 0,
+        overtime: difference > 0 ? Math.round(difference) : 0,
+        undertime: difference < 0 ? Math.round(Math.abs(difference)) : 0,
         hoursWorked: parseFloat(hoursWorked.toFixed(2))
     };
 }
@@ -214,9 +214,11 @@ function formatHoursDifferenceDisplay(checkInTime, checkOutTime, standardHours) 
     const result = calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours);
 
     if (result.overtime > 0) {
-        return `<span class="overtime-badge">+${result.overtime} hrs OT</span>`;
+        const hrText = result.overtime === 1 ? 'hr' : 'hrs';
+        return `<span class="overtime-badge">+${result.overtime} ${hrText} OT</span>`;
     } else if (result.undertime > 0) {
-        return `<span class="undertime-badge">-${result.undertime} hrs</span>`;
+        const hrText = result.undertime === 1 ? 'hr' : 'hrs';
+        return `<span class="undertime-badge">-${result.undertime} ${hrText}</span>`;
     }
     return '';
 }
@@ -307,7 +309,8 @@ function renderEmployeeSlots() {
         const sundayEmployee = employees.find(emp => emp.name === SUNDAY_EMPLOYEE_NAME);
         if (sundayEmployee) {
             const slotContainer = document.getElementById('slot1');
-            const employeeCard = createEmployeeCard(sundayEmployee, dateKey, sundayTimeSlots[0]);
+            // On Sundays, standard hours is 6 (not the regular 3)
+            const employeeCard = createEmployeeCard(sundayEmployee, dateKey, sundayTimeSlots[0], 6);
             slotContainer.appendChild(employeeCard);
         }
 
@@ -341,7 +344,7 @@ function renderEmployeeSlots() {
     }
 }
 
-function createEmployeeCard(employee, dateKey, slot) {
+function createEmployeeCard(employee, dateKey, slot, overrideStandardHours = null) {
     const card = document.createElement('div');
     card.className = 'employee-card';
     card.dataset.employee = employee.name;
@@ -352,8 +355,11 @@ function createEmployeeCard(employee, dateKey, slot) {
     const checkInTime = attendanceInfo.checkInTime || '';
     const checkOutTime = attendanceInfo.checkOutTime || '';
 
+    // Use override hours for Sunday, otherwise use employee's standard hours
+    const standardHours = overrideStandardHours !== null ? overrideStandardHours : employee.standardHours;
+
     // Calculate overtime/undertime
-    const hoursDifferenceDisplay = formatHoursDifferenceDisplay(checkInTime, checkOutTime, employee.standardHours);
+    const hoursDifferenceDisplay = formatHoursDifferenceDisplay(checkInTime, checkOutTime, standardHours);
 
     card.innerHTML = `
         <div class="employee-info">
@@ -386,7 +392,7 @@ function createEmployeeCard(employee, dateKey, slot) {
                        data-unique-key="${uniqueKey}"
                        data-employee="${employee.name}"
                        data-slot="${slot.number}"
-                       data-standard-hours="${employee.standardHours}"
+                       data-standard-hours="${standardHours}"
                        ${currentStatus !== 'present' ? 'disabled' : ''}>
             </div>
             <div class="time-input-group">
@@ -397,7 +403,7 @@ function createEmployeeCard(employee, dateKey, slot) {
                        data-unique-key="${uniqueKey}"
                        data-employee="${employee.name}"
                        data-slot="${slot.number}"
-                       data-standard-hours="${employee.standardHours}"
+                       data-standard-hours="${standardHours}"
                        ${currentStatus !== 'present' ? 'disabled' : ''}>
             </div>
         </div>
@@ -411,8 +417,26 @@ function createEmployeeCard(employee, dateKey, slot) {
     const checkInInput = card.querySelector('.check-in-input');
     const checkOutInput = card.querySelector('.check-out-input');
 
+    // Handle time changes
     checkInInput.addEventListener('change', handleTimeChange);
     checkOutInput.addEventListener('change', handleTimeChange);
+
+    // Auto-focus: Move to checkout after check-in is completely filled (on blur)
+    checkInInput.addEventListener('blur', () => {
+        if (checkInInput.value && checkOutInput && !checkOutInput.disabled) {
+            checkOutInput.focus();
+        }
+    });
+
+    // Auto-blur: Deselect check-out after user finishes entering time
+    checkOutInput.addEventListener('blur', () => {
+        // Small delay to ensure blur happens after focus
+        setTimeout(() => {
+            if (checkOutInput.value && document.activeElement === checkOutInput) {
+                checkOutInput.blur();
+            }
+        }, 100);
+    });
 
     return card;
 }
@@ -501,8 +525,26 @@ function createOtherStaffCard(staff, dateKey) {
     const checkInInput = card.querySelector('.check-in-input');
     const checkOutInput = card.querySelector('.check-out-input');
 
+    // Handle time changes
     checkInInput.addEventListener('change', handleOtherStaffTimeChange);
     checkOutInput.addEventListener('change', handleOtherStaffTimeChange);
+
+    // Auto-focus: Move to checkout after check-in is completely filled (on blur)
+    checkInInput.addEventListener('blur', () => {
+        if (checkInInput.value && checkOutInput && !checkOutInput.disabled) {
+            checkOutInput.focus();
+        }
+    });
+
+    // Auto-blur: Deselect check-out after user finishes entering time
+    checkOutInput.addEventListener('blur', () => {
+        // Small delay to ensure blur happens after focus
+        setTimeout(() => {
+            if (checkOutInput.value && document.activeElement === checkOutInput) {
+                checkOutInput.blur();
+            }
+        }, 100);
+    });
 
     return card;
 }
@@ -560,7 +602,39 @@ function handleTimeChange(event) {
 
     saveAttendanceData();
 
-    renderDashboard();
+    // Update overtime display without re-rendering entire dashboard
+    updateOvertimeDisplay(input, uniqueKey);
+}
+
+// Helper function to update overtime display for a specific employee card
+function updateOvertimeDisplay(inputElement, uniqueKey) {
+    const card = inputElement.closest('.employee-card');
+    if (!card) return;
+
+    const checkInInput = card.querySelector('.check-in-input');
+    const checkOutInput = card.querySelector('.check-out-input');
+    const standardHours = parseFloat(checkInInput.dataset.standardHours);
+
+    const checkInTime = checkInInput.value;
+    const checkOutTime = checkOutInput.value;
+
+    const hoursDifferenceDisplay = formatHoursDifferenceDisplay(checkInTime, checkOutTime, standardHours);
+
+    // Update or create hours indicator
+    let hoursIndicator = card.querySelector('.hours-indicator');
+    if (hoursDifferenceDisplay) {
+        if (!hoursIndicator) {
+            // Create new indicator if it doesn't exist
+            hoursIndicator = document.createElement('div');
+            hoursIndicator.className = 'hours-indicator';
+            const employeeInfo = card.querySelector('.employee-info');
+            employeeInfo.appendChild(hoursIndicator);
+        }
+        hoursIndicator.innerHTML = hoursDifferenceDisplay;
+    } else if (hoursIndicator) {
+        // Remove indicator if no overtime/undertime
+        hoursIndicator.remove();
+    }
 }
 
 function getAttendanceInfo(dateKey, key) {
@@ -625,7 +699,8 @@ function handleOtherStaffTimeChange(event) {
 
     saveAttendanceData();
 
-    renderDashboard();
+    // Update overtime display without re-rendering entire dashboard
+    updateOvertimeDisplay(input, uniqueKey);
 }
 
 // ===== DATA PERSISTENCE =====
@@ -897,13 +972,61 @@ function downloadReportCSV() {
 
 // ===== EVENT LISTENERS =====
 function setupEventListeners() {
+    // Date input change
     document.getElementById('dateInput').addEventListener('change', async (e) => {
         selectedDate = new Date(e.target.value + 'T00:00:00');
         attendanceData = await loadAttendanceData();
         renderDashboard();
     });
 
+    // Previous day button
+    document.getElementById('prevDayBtn').addEventListener('click', async () => {
+        selectedDate.setDate(selectedDate.getDate() - 1);
+        document.getElementById('dateInput').value = formatDateForInput(selectedDate);
+        attendanceData = await loadAttendanceData();
+        renderDashboard();
+    });
+
+    // Next day button
+    document.getElementById('nextDayBtn').addEventListener('click', async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setDate(selectedDate.getDate() + 1);
+
+        // Don't allow going beyond today
+        if (selectedDate <= today) {
+            document.getElementById('dateInput').value = formatDateForInput(selectedDate);
+            attendanceData = await loadAttendanceData();
+            renderDashboard();
+        } else {
+            // Reset to today if trying to go beyond
+            selectedDate = today;
+        }
+    });
+
     document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+
+    // Holidays button in Reports view
+    const goToHolidaysBtn = document.getElementById('goToHolidaysBtn');
+    if (goToHolidaysBtn) {
+        goToHolidaysBtn.addEventListener('click', () => {
+            // Remove active from all tabs
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(v => {
+                v.style.display = 'none';
+                v.classList.remove('active');
+            });
+            // Show holidays view
+            const holidaysView = document.getElementById('holidaysView');
+            if (holidaysView) {
+                holidaysView.style.display = 'block';
+                setTimeout(() => holidaysView.classList.add('active'), 10);
+                loadHolidays();
+                setupHolidayForm();
+            }
+        });
+    }
 
     // Download report CSV button
     document.getElementById('downloadReportCsvBtn').addEventListener('click', downloadReportCSV);

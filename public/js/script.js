@@ -531,6 +531,31 @@ function setupEventListeners() {
         renderDashboard();
     });
 
+    // Previous day button
+    document.getElementById('prevDayBtn').addEventListener('click', async () => {
+        selectedDate.setDate(selectedDate.getDate() - 1);
+        document.getElementById('dateInput').value = formatDateForInput(selectedDate);
+        attendanceData = await loadAttendanceData();
+        renderDashboard();
+    });
+
+    // Next day button
+    document.getElementById('nextDayBtn').addEventListener('click', async () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setDate(selectedDate.getDate() + 1);
+
+        // Don't allow going beyond today
+        if (selectedDate <= today) {
+            document.getElementById('dateInput').value = formatDateForInput(selectedDate);
+            attendanceData = await loadAttendanceData();
+            renderDashboard();
+        } else {
+            // Reset to today if trying to go beyond
+            selectedDate = today;
+        }
+    });
+
     // Export button
     document.getElementById('exportBtn').addEventListener('click', exportToCSV);
 
