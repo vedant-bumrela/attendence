@@ -117,7 +117,7 @@ function renderDoctorsList() {
     }
 
     container.innerHTML = doctors.map((doctor, index) => {
-        const daysText = doctor.days.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d - 1]).join(', ');
+        const daysText = doctor.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ');
         const slotsText = doctor.slots.map(s => `Slot ${s}`).join(', ');
         const joiningDateFormatted = doctor.joiningDate ? new Date(doctor.joiningDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not set';
         const isActive = doctor.active !== false; // Default to true if not set
