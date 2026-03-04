@@ -5,8 +5,12 @@ const STAFF_API_URL = 'http://localhost:3000/api';
 // Employees are now loaded from the database API instead of localStorage
 
 // Dynamic employee lists (loaded from API)
+// Full lists (used in Manage Employees tab — includes inactive)
 let employees = [];
 let otherStaff = [];
+// Active-only lists (used for attendance dashboard rendering)
+let activeEmployees = [];
+let activeOtherStaff = [];
 
 // Load employees from API
 async function loadEmployeesFromAPI() {
@@ -14,18 +18,25 @@ async function loadEmployeesFromAPI() {
         const response = await fetch(`${STAFF_API_URL}/staff`);
         if (response.ok) {
             const allStaff = await response.json();
-            // Separate into employees and other staff
+            // Separate into employees and other staff (all, including inactive)
             employees = allStaff.filter(s => s.type === 'employee');
             otherStaff = allStaff.filter(s => s.type === 'other');
+            // Active-only for dashboard
+            activeEmployees = employees.filter(s => s.active !== false);
+            activeOtherStaff = otherStaff.filter(s => s.active !== false);
         } else {
             console.error('Failed to load staff from API');
             employees = [];
             otherStaff = [];
+            activeEmployees = [];
+            activeOtherStaff = [];
         }
     } catch (error) {
         console.error('Error loading staff from API:', error);
         employees = [];
         otherStaff = [];
+        activeEmployees = [];
+        activeOtherStaff = [];
     }
 }
 
@@ -93,32 +104,32 @@ async function editEmployee(index, empData) {
     }
 }
 
-// Delete employee (via API)
-async function deleteEmployee(index, isOtherStaff = false) {
+// Toggle employee active/inactive status (via API)
+async function toggleEmployeeStatus(index, isOtherStaff = false) {
     const list = isOtherStaff ? otherStaff : employees;
     const staff = list[index];
     if (!staff || !staff._id) {
         console.error('Staff not found or missing ID');
         return;
     }
-
-    if (confirm(`Are you sure you want to delete "${staff.name}"?\n\nThis action cannot be undone.`)) {
-        try {
-            const response = await fetch(`${STAFF_API_URL}/staff/${staff._id}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                await loadEmployeesFromAPI();
-                renderEmployeesList();
-                renderDashboard();
-            } else {
-                const error = await response.json();
-                alert(error.error || 'Failed to delete employee');
-            }
-        } catch (error) {
-            console.error('Error deleting employee:', error);
-            alert('Error deleting employee');
+    const newStatus = !(staff.active !== false);
+    try {
+        const response = await fetch(`${STAFF_API_URL}/staff/${staff._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: newStatus })
+        });
+        if (response.ok) {
+            await loadEmployeesFromAPI();
+            renderEmployeesList();
+            renderDashboard();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to update employee status');
         }
+    } catch (error) {
+        console.error('Error toggling employee status:', error);
+        alert('Error toggling employee status');
     }
 }
 
@@ -134,7 +145,7 @@ const timeSlots = [
 const sundayTimeSlots = [
     { number: 1, name: "Sunday Shift", time: "2:00 PM - 8:00 PM" }
 ];
-const SUNDAY_EMPLOYEE_NAME = "Miss. Siddhi Surve";
+const SUNDAY_EMPLOYEE_NAME = "Ms. Siddhi Surve";
 const SUNDAY_SCHEDULE_START_DATE = new Date('2026-01-18'); // Sunday schedule starts from this date
 
 // ===== STATE MANAGEMENT =====
@@ -305,8 +316,8 @@ function renderEmployeeSlots() {
             }
         });
 
-        // Find Vedant Bumrela from employees list
-        const sundayEmployee = employees.find(emp => emp.name === SUNDAY_EMPLOYEE_NAME);
+        // Find Sunday employee from ACTIVE employees only
+        const sundayEmployee = activeEmployees.find(emp => emp.name === SUNDAY_EMPLOYEE_NAME);
         if (sundayEmployee) {
             const slotContainer = document.getElementById('slot1');
             // On Sundays, standard hours is 6 (not the regular 3)
@@ -328,11 +339,11 @@ function renderEmployeeSlots() {
             if (timeSpan && timeSlots[index]) timeSpan.textContent = timeSlots[index].time;
         });
 
-        // Render all employees in all slots
+        // Render ACTIVE employees in all slots
         timeSlots.forEach(slot => {
             const slotContainer = document.getElementById(`slot${slot.number}`);
 
-            employees.forEach(employee => {
+            activeEmployees.forEach(employee => {
                 const employeeCard = createEmployeeCard(employee, dateKey, slot);
                 slotContainer.appendChild(employeeCard);
             });
@@ -448,7 +459,8 @@ function renderOtherStaff(dateKey) {
 
     container.innerHTML = '';
 
-    otherStaff.forEach(staff => {
+    // Only render ACTIVE other staff on dashboard
+    activeOtherStaff.forEach(staff => {
         const staffCard = createOtherStaffCard(staff, dateKey);
         container.appendChild(staffCard);
     });
@@ -744,8 +756,13 @@ async function saveAttendanceData() {
 
 // ===== EXPORT FUNCTIONALITY =====
 async function exportToCSV() {
-    // Direct download - browser will use Content-Disposition header for filename
-    window.location.href = `${API_URL}/export/csv`;
+    // Use the date range from the last generated report
+    if (!currentReportData || !currentReportData.dateRange) {
+        alert('Please go to the Reports tab and generate a report first, then click Detailed Report.');
+        return;
+    }
+    const { start, end } = currentReportData.dateRange;
+    window.location.href = `${API_URL}/export/csv?startDate=${start}&endDate=${end}`;
 }
 
 // ===== DATABASE VIEW =====
@@ -1101,16 +1118,37 @@ function createEmployeeItem(emp, index, isOther) {
     item.className = 'doctor-item';
 
     const roleInfo = isOther ? `<p>${emp.role || 'Staff'} • ${emp.workTime || 'N/A'}</p>` : '';
+    const isActive = emp.active !== false;
+    const statusBadge = isActive
+        ? '<span class="status-badge active">Active</span>'
+        : '<span class="status-badge inactive">Inactive</span>';
+
+    const joiningText = emp.joiningDate
+        ? `<p><strong>Joined:</strong> ${new Date(emp.joiningDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>`
+        : '';
+    const resignationText = emp.resignationDate
+        ? `<p style="color:#F43F5E;"><strong>Resigned:</strong> ${new Date(emp.resignationDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>`
+        : '';
 
     item.innerHTML = `
         <div class="doctor-item-info">
-            <h4>${emp.name}</h4>
+            <h4>${emp.name} ${statusBadge}</h4>
             <p>Standard Hours: ${emp.standardHours} hrs/day</p>
+            ${joiningText}
+            ${resignationText}
             ${roleInfo}
         </div>
         <div class="doctor-item-actions">
             <button class="btn-icon btn-edit" onclick="populateEditForm(${index}, ${isOther})">Edit</button>
-            <button class="btn-icon btn-delete" onclick="deleteEmployee(${index}, ${isOther})">Delete</button>
+            <label class="switch-button" title="${isActive ? 'Click to deactivate' : 'Click to activate'}">
+                <div class="switch-outer">
+                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleEmployeeStatus(${index}, ${isOther})">
+                    <div class="button">
+                        <span class="button-toggle"></span>
+                        <span class="button-indicator"></span>
+                    </div>
+                </div>
+            </label>
         </div>
     `;
 
@@ -1142,7 +1180,9 @@ function setupEmployeeForm() {
             standardHours: parseInt(document.getElementById('standardHours').value),
             type: empType,
             role: document.getElementById('empRole').value.trim(),
-            workTime: document.getElementById('empWorkTime').value.trim()
+            workTime: document.getElementById('empWorkTime').value.trim(),
+            joiningDate: document.getElementById('empJoiningDate').value || null,
+            resignationDate: document.getElementById('empResignationDate').value || null
         };
 
         if (editIndex !== '') {
@@ -1164,6 +1204,8 @@ function populateEditForm(index, isOther) {
     document.getElementById('empEditIndex').value = index;
     document.getElementById('employeeName').value = emp.name;
     document.getElementById('standardHours').value = emp.standardHours;
+    document.getElementById('empJoiningDate').value = emp.joiningDate || '';
+    document.getElementById('empResignationDate').value = emp.resignationDate || '';
 
     // Set employee type
     const typeRadio = document.querySelector(`input[name="empType"][value="${isOther ? 'other' : 'regular'}"]`);
@@ -1199,6 +1241,8 @@ function resetEmployeeForm() {
     document.getElementById('empSubmitBtnText').textContent = 'Add Employee';
     document.getElementById('empCancelBtn').style.display = 'none';
     document.getElementById('otherStaffFields').style.display = 'none';
+    document.getElementById('empJoiningDate').value = '';
+    document.getElementById('empResignationDate').value = '';
     document.querySelector('input[name="empType"][value="regular"]').checked = true;
 }
 
