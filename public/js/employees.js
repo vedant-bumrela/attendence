@@ -209,8 +209,8 @@ function calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours) 
     const difference = hoursWorked - standardHours;
 
     return {
-        overtime: difference > 0 ? Math.round(difference) : 0,
-        undertime: difference < 0 ? Math.round(Math.abs(difference)) : 0,
+        overtime: difference > 0 ? difference : 0,
+        undertime: difference < 0 ? Math.abs(difference) : 0,
         hoursWorked: parseFloat(hoursWorked.toFixed(2))
     };
 }
@@ -224,12 +224,19 @@ function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
 function formatHoursDifferenceDisplay(checkInTime, checkOutTime, standardHours) {
     const result = calculateWorkHoursDifference(checkInTime, checkOutTime, standardHours);
 
+    function toHM(dec) {
+        const totalMins = Math.round(dec * 60);
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        if (h === 0) return `${m}m`;
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}m`;
+    }
+
     if (result.overtime > 0) {
-        const hrText = result.overtime === 1 ? 'hr' : 'hrs';
-        return `<span class="overtime-badge">+${result.overtime} ${hrText} OT</span>`;
+        return `<span class="overtime-badge">+${toHM(result.overtime)} OT</span>`;
     } else if (result.undertime > 0) {
-        const hrText = result.undertime === 1 ? 'hr' : 'hrs';
-        return `<span class="undertime-badge">-${result.undertime} ${hrText}</span>`;
+        return `<span class="undertime-badge">-${toHM(result.undertime)}</span>`;
     }
     return '';
 }
@@ -875,6 +882,17 @@ function renderAnalytics(data) {
     document.getElementById('downloadReportCsvBtn').style.display = 'inline-block';
 }
 
+// Converts decimal hours to precise format: 2.75 -> "2h 45m"
+function formatOvertimeHours(decimalHours) {
+    if (!decimalHours || decimalHours <= 0) return '-';
+    const totalMins = Math.round(decimalHours * 60);
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+}
+
 function renderEmployeeStatsTable(employees) {
     const tbody = document.getElementById('statsTableBody');
     tbody.innerHTML = '';
@@ -893,7 +911,7 @@ function renderEmployeeStatsTable(employees) {
             <td style="font-weight: 600; color: var(--text-primary);">${emp.name}</td>
             <td><span class="stat-badge present-badge">${emp.presentDays} / ${emp.workingDays || '-'}</span></td>
             <td><span class="stat-badge absent-badge">${emp.absentDays}</span></td>
-            <td><span class="stat-badge" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">${emp.totalOvertimeHours || 0} hrs</span></td>
+            <td><span class="stat-badge" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">${formatOvertimeHours(emp.totalOvertimeHours)}</span></td>
             <td>
                 <div class="attendance-rate-container">
                     <span class="attendance-rate-text">${emp.attendanceRate}%</span>
@@ -953,7 +971,7 @@ function downloadReportCSV() {
             emp.name,
             emp.presentDays,
             emp.absentDays,
-            emp.totalOvertimeHours || 0,
+            formatOvertimeHours(emp.totalOvertimeHours),
             emp.totalSlotAttendances,
             emp.attendanceRate
         ]);

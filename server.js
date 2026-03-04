@@ -39,8 +39,8 @@ function calculateOvertimeHours(checkInTime, checkOutTime, standardHours) {
     const hoursWorked = totalMinutes / 60;
     const overtime = Math.max(0, hoursWorked - standardHours);
 
-    // Round to nearest whole hour
-    return Math.round(overtime);
+    // Store precise decimal (e.g. 1.333... for 1h 20m)
+    return parseFloat(overtime.toFixed(4));
 }
 
 // MongoDB Connection
@@ -581,7 +581,12 @@ app.get('/api/employees/export/csv', async (req, res) => {
                 record.timeSlot || 'N/A',
                 record.checkInTime || 'N/A',
                 record.checkOutTime || 'N/A',
-                record.overtimeHours > 0 ? `+${record.overtimeHours} hrs` : '-',
+                record.overtimeHours > 0 ? (() => {
+                    const totalMins = Math.round(record.overtimeHours * 60);
+                    const h = Math.floor(totalMins / 60);
+                    const m = totalMins % 60;
+                    return h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
+                })() : '-',
                 new Date(record.createdAt).toLocaleString()
             ]);
         });
