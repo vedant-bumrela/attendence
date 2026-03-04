@@ -618,7 +618,7 @@ app.get('/api/employees/analytics', async (req, res) => {
 
         // Sunday schedule start date (Jan 18, 2026) - Vedant works Sundays from this date
         const SUNDAY_SCHEDULE_START = new Date('2026-01-18');
-        const SUNDAY_EMPLOYEE = 'Ms. Siddhi Surve';
+        const SUNDAY_EMPLOYEE = 'Miss. Siddhi Surve';
 
 
         // Fetch all holidays in date range
