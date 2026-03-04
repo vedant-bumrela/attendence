@@ -556,13 +556,21 @@ app.post('/api/employees/attendance/:date', async (req, res) => {
     }
 });
 
-// Export employee attendance to CSV
+// Export employee attendance to CSV (optional date range via query params)
 app.get('/api/employees/export/csv', async (req, res) => {
     try {
-        const records = await EmployeeAttendance.find().sort({ date: -1, employeeName: 1 });
+        const { startDate, endDate } = req.query;
+
+        // Build query — filter by date range if provided
+        const query = {};
+        if (startDate && endDate) {
+            query.date = { $gte: startDate, $lte: endDate };
+        }
+
+        const records = await EmployeeAttendance.find(query).sort({ date: -1, employeeName: 1 });
 
         const rows = [
-            ['Date', 'Employee Name', 'Status', 'Time Slot', 'Check-In Time', 'Check-Out Time', 'Recorded At']
+            ['Date', 'Employee Name', 'Status', 'Time Slot', 'Check-In Time', 'Check-Out Time', 'Overtime Hours', 'Recorded At']
         ];
 
         records.forEach(record => {
@@ -573,6 +581,7 @@ app.get('/api/employees/export/csv', async (req, res) => {
                 record.timeSlot || 'N/A',
                 record.checkInTime || 'N/A',
                 record.checkOutTime || 'N/A',
+                record.overtimeHours > 0 ? `+${record.overtimeHours} hrs` : '-',
                 new Date(record.createdAt).toLocaleString()
             ]);
         });
@@ -581,8 +590,13 @@ app.get('/api/employees/export/csv', async (req, res) => {
             row.map(cell => `"${cell}"`).join(',')
         ).join('\n');
 
+        // Build filename with date range if provided
+        const filenameSuffix = startDate && endDate
+            ? `${startDate}-to-${endDate}`
+            : new Date().toISOString().split('T')[0];
+
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="employee-attendance-export-' + new Date().toISOString().split('T')[0] + '.csv"');
+        res.setHeader('Content-Disposition', `attachment; filename="employee-attendance-${filenameSuffix}.csv"`);
         res.send(csvContent);
     } catch (error) {
         console.error('Error exporting employee CSV:', error);
@@ -606,6 +620,7 @@ app.get('/api/employees/analytics', async (req, res) => {
         const SUNDAY_SCHEDULE_START = new Date('2026-01-18');
         const SUNDAY_EMPLOYEE = 'Miss. Siddhi Surve';
 
+
         // Fetch all holidays in date range
         const holidays = await Holiday.find({
             date: { $gte: startDate, $lte: endDate }
@@ -621,11 +636,29 @@ app.get('/api/employees/analytics', async (req, res) => {
         }
 
         // Helper function to calculate working days for an employee
-        function calculateWorkingDays(employeeName) {
+        // Clamps to their joiningDate and resignationDate if set
+        function calculateWorkingDays(employeeName, joiningDate, resignationDate) {
             let workingDays = 0;
-            let current = new Date(start);
 
-            while (current <= end) {
+            // Clamp start/end to joining / resignation dates
+            let effectiveStart = new Date(start);
+            let effectiveEnd = new Date(end);
+
+            if (joiningDate) {
+                const joining = new Date(joiningDate);
+                if (joining > effectiveStart) effectiveStart = joining;
+            }
+            if (resignationDate) {
+                const resignation = new Date(resignationDate);
+                if (resignation < effectiveEnd) effectiveEnd = resignation;
+            }
+
+            // If the employee wasn't employed at all during this range, return 0
+            if (effectiveStart > effectiveEnd) return 0;
+
+            let current = new Date(effectiveStart);
+
+            while (current <= effectiveEnd) {
                 const dateStr = formatDate(current);
                 const isSunday = current.getDay() === 0;
                 const isHoliday = holidayDates.has(dateStr);
@@ -676,17 +709,25 @@ app.get('/api/employees/analytics', async (req, res) => {
         const uniqueDates = [...new Set(records.map(r => r.date))];
         const totalRecordedDays = uniqueDates.length;
 
+        // Fetch all staff from DB to get joining/resignation dates
+        const staffFromDB = await require('./models/Employee').find();
+        const staffMap = {};
+        staffFromDB.forEach(s => {
+            staffMap[s.name] = { joiningDate: s.joiningDate, resignationDate: s.resignationDate };
+        });
+
         // Group by employee and calculate statistics
         const employeeStats = {};
 
         employees.forEach(emp => {
+            const { joiningDate, resignationDate } = staffMap[emp.name] || {};
             employeeStats[emp.name] = {
                 name: emp.name,
                 presentDays: new Set(),
                 absentDays: new Set(),
                 totalSlotAttendances: 0,
                 totalOvertimeHours: 0,
-                workingDays: calculateWorkingDays(emp.name)
+                workingDays: calculateWorkingDays(emp.name, joiningDate, resignationDate)
             };
         });
 
@@ -694,13 +735,14 @@ app.get('/api/employees/analytics', async (req, res) => {
         records.forEach(record => {
             const empName = record.employeeName;
             if (!employeeStats[empName]) {
+                const { joiningDate, resignationDate } = staffMap[empName] || {};
                 employeeStats[empName] = {
                     name: empName,
                     presentDays: new Set(),
                     absentDays: new Set(),
                     totalSlotAttendances: 0,
                     totalOvertimeHours: 0,
-                    workingDays: calculateWorkingDays(empName)
+                    workingDays: calculateWorkingDays(empName, joiningDate, resignationDate)
                 };
             }
 

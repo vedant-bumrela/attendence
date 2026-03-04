@@ -27,6 +27,12 @@ const employeeSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: true
+    },
+    joiningDate: {
+        type: String   // YYYY-MM-DD format
+    },
+    resignationDate: {
+        type: String   // YYYY-MM-DD format
     }
 }, {
     timestamps: true
