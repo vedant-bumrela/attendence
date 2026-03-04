@@ -134,7 +134,7 @@ const timeSlots = [
 const sundayTimeSlots = [
     { number: 1, name: "Sunday Shift", time: "2:00 PM - 8:00 PM" }
 ];
-const SUNDAY_EMPLOYEE_NAME = "Mr. Vedant Bumrela";
+const SUNDAY_EMPLOYEE_NAME = "Miss. Siddhi Surve";
 const SUNDAY_SCHEDULE_START_DATE = new Date('2026-01-18'); // Sunday schedule starts from this date
 
 // ===== STATE MANAGEMENT =====
